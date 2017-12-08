@@ -43,10 +43,11 @@ const int pin_img_stop  = 10;
 
 // Output codes
 const int code_end = 0;
-const int code_lick_onset = 1;
-const int code_lick_offset = 2;
+const int code_lick = 1;
+const int code_track = 2;
 const int code_trial_start = 3;
-const int code_track = 7;
+const int code_cs_start = 4;
+const int code_us_start = 4;
 
 // Variables via serial
 unsigned long pre_session;
@@ -72,13 +73,13 @@ unsigned int us1_dur;
 
 boolean image_all;
 unsigned int image_ttl_dur;
+unsigned int track_period;
 
 unsigned int us_delay;
-unsigned int track_period = 50;
 
 // Other variables
-unsigned long *trials;           // Pointer to array for DMA; initialized later
 boolean *cs0_trials;
+unsigned long next_trial_ts;
 unsigned long trial_num;
 unsigned long trial_dur;
 unsigned long session_dur;
@@ -98,7 +99,7 @@ void Track() {
 //   else lick_off++;
 // }
 
-// End session
+
 void EndSession(unsigned long ts) {
   // Send "end" signal
   Serial.print(code_end);
@@ -118,6 +119,7 @@ void EndSession(unsigned long ts) {
   while (1);
 }
 
+
 int ExpDistro(unsigned int mean_val, unsigned int min_val, unsigned int max_val) {
   float u;                                        // Random number from uniform distribution
   float max_factor = (float)max_val / mean_val;   // How many times greater is max from mean?
@@ -133,39 +135,6 @@ int ExpDistro(unsigned int mean_val, unsigned int min_val, unsigned int max_val)
   return mean_val * rand_factor;
 }
 
-void GenTrials() {
-  // Generate trial start times. 
-  // ITIs can be created uniformly or from an exponential distribution. Set by 
-  // variable `uniform_iti`.
-  
-  // Timestamp of last trial during trial list creation. Initially defined as
-  // delay to first trial (pre_session).
-  unsigned long last_trial = pre_session;
-  
-  if (uniform_iti) {
-    // Create trials with same ITIs.
-    // ITIs defined by `mean_iti`.
-    for (int tt = 0; tt < trial_num; tt++) {
-      trials[tt] = last_trial + mean_iti;
-      last_trial = trials[tt];
-    }
-  }
-  else {
-    // Create ITIs from an exponential distribution
-    unsigned long iti;
-
-    for (int tt = 0; tt < trial_num; tt++) {
-      // Make sure `min_iti` is valid
-      if (min_iti < trial_dur) {
-        min_iti = trial_dur;
-      }
-      
-      iti = ExpDistro(mean_iti, min_iti, max_iti);
-      trials[tt] = (unsigned long) last_trial + iti;  // Casting unnecessary?
-      last_trial = trials[tt];
-    }
-  }
-}
 
 void ShuffleTrials() {
   // Shuffle CS0 & CS1 trials
@@ -191,9 +160,10 @@ void ShuffleTrials() {
   }
 }
 
+
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 20;
+  const int paramNum = 21;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -223,11 +193,13 @@ void GetParams() {
 
   image_all = parameters[18];
   image_ttl_dur = parameters[19];
+  track_period = parameters[20];
 
   us_delay = us0_delay;
   trial_num = cs0_num + cs1_num;
   trial_dur = pre_stim + post_stim;
 }
+
 
 void WaitForStart() {
   byte reading;
@@ -243,9 +215,20 @@ void WaitForStart() {
   }
 }
 
-void ShutdownTones() {
-  // Turn off all tones to ensure next one will play
-  noTone(pin_tone);
+
+void Tone(int pin, unsigned int freq, unsigned int dur) {
+  // Turn off all tones befor playing to ensure next one will play
+  noTone(pin);
+  tone(pin, freq, dur);
+}
+
+
+void SendSerial(unsigned int code, unsigned long ts, long data) {
+  Serial.print(code);
+  Serial.print(DELIM);
+  Serial.print(ts);
+  Serial.print(DELIM);
+  Serial.println(data);
 }
 
 
@@ -273,18 +256,18 @@ void setup() {
   GetParams();
   Serial.println("Paremeters processed");
 
-  // Create trials
-  trials = new () unsigned long[trial_num];  // Allocate memory
-  GenTrials();
-  session_dur = trials[trial_num-1] + trial_dur + post_session;
-  // Print trial times
-  for (int ii = 0; ii < trial_num; ii++) {
-    Serial.print(trials[ii]);
-    Serial.print(" ");
+  // First trial
+  if (uniform_iti) {
+    next_trial_ts = pre_session + mean_iti;
   }
-  Serial.println("");
-  Serial.print("Session end at ");
-  Serial.println(session_dur);
+  else {
+    // Create ITIs from an exponential distribution
+
+    // Make sure min_iti is valid
+    if (min_iti < trial_dur) min_iti = trial_dur;
+    
+    next_trial_ts = (unsigned long) pre_session + ExpDistro(mean_iti, min_iti, max_iti);  // Casting unnecessary?
+  }
 
   // Shuffle trials
   cs0_trials = new () boolean[trial_num];
@@ -330,14 +313,10 @@ void loop() {
   static const unsigned long start = millis();  // record start of session
   unsigned long ts = millis() - start;          // current timestamp
 
-  // Turn off events.
+  // Turn off events
   if (ts >= img_start_ts + IMGPINDUR) digitalWrite(pin_img_start, LOW);
   if (ts >= img_stop_ts + IMGPINDUR) digitalWrite(pin_img_stop, LOW);
-  if (ts >= ts_us + trial_sol_dur) {
-    // if (digitalRead(trial_sol_pin)) Serial.println("Close solenoid");
-    digitalWrite(trial_sol_pin, LOW);
-  }
-
+  if (ts >= ts_us + trial_sol_dur) digitalWrite(trial_sol_pin, LOW);
 
   // -- SESSION CONTROL -- //
 
@@ -360,11 +339,10 @@ void loop() {
     }
   }
 
-
   // -- 1. TRIAL CONTROL -- //
 
-  // Control trials and session end
-  if (trial_ix < trial_num && ! in_trial && ts >= trials[trial_ix]) {
+  // Check for trial start or session end
+  if (trial_ix < trial_num && ! in_trial && ts >= next_trial_ts) {
     // Beginning of trial
     in_trial = true;
 
@@ -391,38 +369,29 @@ void loop() {
     // Start imaging (if applicable)
     if (! image_all) digitalWrite(pin_img_start, HIGH);
 
-    Serial.print("Trial start at ");
-    Serial.print(ts);
-    Serial.print(" | stim at ");
-    Serial.print(ts_stim);
-    Serial.print(" | reward at ");
-    Serial.print(ts_us);
-    Serial.print(" | stop at ");
-    Serial.println(ts_trial_end);
+    // Determine next trial
+    if (uniform_iti) next_trial_ts += mean_iti;
+    else next_trial_ts += ExpDistro(mean_iti, min_iti, max_iti);
+
+    SendSerial(code_trial_start, ts, cs0_trials[trial_ix]);
   }
   else if (! in_trial && ts >= session_dur) {
     EndSession(ts);
   }
 
+  // Control trial events (when in trial)
   if (in_trial) {
     if (! stimmed && ts >= ts_stim) {
       // Present CS
       stimmed = true;
-      ShutdownTones();
-      tone(pin_tone, trial_tone_freq, trial_tone_dur);
-
-      Serial.print("CS presented at ");
-      Serial.println(ts);
+      Tone(pin_tone, trial_tone_freq, trial_tone_dur);
+      SendSerial(code_cs_start, ts, cs0_trials[trial_ix]);
     }
     if (! rewarded && ts >= ts_us) {
       // Deliver reward
       rewarded = true;
       digitalWrite(trial_sol_pin, HIGH);
-
-      Serial.print("Reward delivered on pin ");
-      Serial.print(trial_sol_pin);
-      Serial.print(" at ");
-      Serial.println(ts);
+      SendSerial(code_us_start, ts, cs0_trials[trial_ix]);
     }
     if (ts >= ts_trial_end) {
       // End trial
@@ -431,60 +400,29 @@ void loop() {
       rewarded = false;
       trial_ix++;
       if (! image_all) digitalWrite(pin_img_stop, HIGH);
-
-      Serial.print("Trial ended at ");
-      Serial.println(ts);
     }
   }
 
   // -- 2. TRACK MOVEMENT -- //
 
   if (ts >= next_track_ts) {
-    int track_out_val = track_change;
-    track_change = 0;
-    
-    if (track_out_val != 0) {
-      Serial.print(code_track);
-      Serial.print(DELIM);
-      Serial.print(ts);
-      Serial.print(DELIM);
-      Serial.println(track_out_val);
+    // Check for movement
+    if (track_change != 0) {
+      SendSerial(code_track, ts, track_change);
+      track_change = 0;
     }
     
     // Increment nextTractTS for next track stamp
-    next_track_ts = next_track_ts + track_period;
+    next_track_ts += track_period;
   }
 
   // -- 3. TRACK LICING -- //
 
   boolean lick_state_now = digitalRead(pin_lick);
   if (lick_state_now != lick_state) {
-    if (lick_state_now) {
-      Serial.print(code_lick_onset);
-      Serial.print(DELIM);
-      Serial.println(ts);
-    }
-    else {
-      Serial.print(code_lick_offset);
-      Serial.print(DELIM);
-      Serial.println(ts);
-    }
+    // Check if change in state is onset or offset
+    if (lick_state_now) SendSerial(code_lick, ts, 1);
+    else SendSerial(code_lick, ts, 0);
   }
   lick_state = lick_state_now;
-  // if (lick_on > 0) {
-  //   Serial.print(code_lick_onset);
-  //   Serial.print(DELIM);
-  //   Serial.print(ts);
-  //   Serial.print(DELIM);
-  //   Serial.println(lick_on);
-  //   lick_on = 0;
-  // }
-  // if (lick_off > 0) {
-  //   Serial.print(code_lick_offset);
-  //   Serial.print(DELIM);
-  //   Serial.print(ts);
-  //   Serial.print(DELIM);
-  //   Serial.println(lick_off);
-  //   lick_off = 0;
-  // }
 }

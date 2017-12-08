@@ -107,6 +107,10 @@ class InputManager(tk.Frame):
         ### Arduino frame
         frame_arduino = tk.LabelFrame(frame_setup_col0, text='Arduino')
         frame_arduino.grid(row=1, column=0, padx=px, pady=py)
+        frame_arduino1 = tk.Frame(frame_arduino)
+        frame_arduino2 = tk.Frame(frame_arduino)
+        frame_arduino1.grid(row=0, column=0, padx=px, pady=py)
+        frame_arduino2.grid(row=1, column=0, padx=px, pady=py)
 
         ### Debug frame
         frame_debug = tk.LabelFrame(frame_setup_col0, text='Debug')
@@ -176,18 +180,18 @@ class InputManager(tk.Frame):
         ## frame_arduino
         ## Arduino setup
         self.port_var = tk.StringVar()
-        self.entry_serial_status = tk.Entry(frame_arduino)
-        self.option_ports = tk.OptionMenu(frame_arduino, self.port_var, [])
-        self.button_open_port = tk.Button(frame_arduino, text='Open', command=self.open_serial)
-        self.button_close_port = tk.Button(frame_arduino, text='Close', command=self.close_serial)
-        self.button_update_ports = tk.Button(frame_arduino, text='Update', command=self.update_ports)
-        tk.Label(frame_arduino, text='Serial port: ').grid(row=0, column=0, sticky='e', padx=px1)
-        tk.Label(frame_arduino, text='Serial status: ').grid(row=1, column=0, sticky='e', padx=px1)
-        self.option_ports.grid(row=0, column=1, columnspan=2, sticky=tk.W+'e', padx=px1)
-        self.entry_serial_status.grid(row=1, column=1, columnspan=2, sticky='w', padx=px1)
-        self.button_open_port.grid(row=2, column=0, pady=py)
-        self.button_close_port.grid(row=2, column=1, pady=py)
-        self.button_update_ports.grid(row=2, column=2, pady=py)
+        self.entry_serial_status = tk.Entry(frame_arduino1)
+        self.option_ports = tk.OptionMenu(frame_arduino1, self.port_var, [])
+        self.button_update_ports = tk.Button(frame_arduino1, text='u', command=self.update_ports)
+        self.button_open_port = tk.Button(frame_arduino2, text='Open', command=self.open_serial)
+        self.button_close_port = tk.Button(frame_arduino2, text='Close', command=self.close_serial)
+        tk.Label(frame_arduino1, text='Port: ').grid(row=0, column=0, sticky='e', padx=px1)
+        tk.Label(frame_arduino1, text='State: ').grid(row=1, column=0, sticky='e', padx=px1)
+        self.option_ports.grid(row=0, column=1, sticky='we', padx=px1)
+        self.entry_serial_status.grid(row=1, column=1, sticky='w', padx=px1)
+        self.button_update_ports.grid(row=0, column=2, pady=py)
+        self.button_open_port.grid(row=0, column=0, pady=py, sticky='we')
+        self.button_close_port.grid(row=0, column=1, pady=py, sticky='we')
 
         self.entry_serial_status.insert(0, 'Closed')
         self.entry_serial_status['state'] = 'normal'
@@ -275,10 +279,13 @@ class InputManager(tk.Frame):
         self.var_image_all = tk.BooleanVar()
         self.entry_image_ttl_dur = tk.Entry(frame_misc, width=entry_width)
         self.check_image_all = tk.Checkbutton(frame_misc, variable=self.var_image_all)
+        self.entry_track_period = tk.Entry(frame_misc, width=entry_width)
         tk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
         self.check_image_all.grid(row=0, column=1, sticky='w')
         self.entry_image_ttl_dur.grid(row=1, column=1, sticky='w')
+        self.entry_track_period.grid(row=2, column=1, sticky='w')
 
         ## frame_notes
         ## UI for note taking.
@@ -349,6 +356,7 @@ class InputManager(tk.Frame):
             self.entry_us1_dur,
             self.check_image_all,
             self.entry_image_ttl_dur,
+            self.entry_track_period,
         ]
         self.obj_to_enable_when_open = [
             self.button_close_port,
@@ -396,6 +404,7 @@ class InputManager(tk.Frame):
 
         self.var_image_all.set(0)
         self.entry_image_ttl_dur.insert(0, 100)
+        self.entry_track_period.insert(0, 50)
 
         # Finalize
         self.parameters = collections.OrderedDict()
@@ -483,7 +492,8 @@ class InputManager(tk.Frame):
         # Send parameters to Arduino
 
         # Define parameters
-        # NOTE: Order is important here since this order is preserved when sending via serial.
+        # NOTE: Order is important here since this order is preserved when 
+        # sending via serial.
         self.parameters['pre_session'] = self.entry_pre_session.get()
         self.parameters['post_session'] = self.entry_post_session.get()
         self.parameters['cs0_num'] = self.entry_cs0_num.get()
@@ -507,7 +517,9 @@ class InputManager(tk.Frame):
 
         self.parameters['image_all'] = self.var_image_all.get()
         self.parameters['image_ttl_dur'] = self.entry_image_ttl_dur.get()
+        self.parameters['track_period'] = self.entry_track_period.get()
 
+        # Cast parameters to int
         self.parameters = {key: int(val) for key, val in self.parameters.iteritems()}
 
         send_status = send_to_arduino(self.ser, self.parameters, self.var_verbose.get())
@@ -566,6 +578,48 @@ class InputManager(tk.Frame):
         # for q in [self.q, self.q_to_thread_rec, self.q_from_thread_rec]:
         #     with q.mutex:
         #         q.queue.clear()
+
+        # Create data file
+        if self.entry_save.get():
+            try:
+                # Create file if it doesn't already exist ('x' parameter)
+                self.data_file = h5py.File(self.entry_save.get(), 'x')
+            except IOError:
+                tkMessageBox.showerror('File error', 'Could not create file to save data.')
+                self.gui_util('stop')
+                self.gui_util('open')
+                self.gui_util('opened')
+                return
+        else:
+            # Default file name
+            if not os.path.exists('data'):
+                os.makedirs('data')
+            now = datetime.now()
+            filename = 'data/data-' + now.strftime('%y%m%d-%H%M%S') + '.h5'
+            self.data_file = h5py.File(filename, 'x')
+
+        # self.grp_cam = self.data_file.create_group('cam')
+        # self.dset_ts = self.grp_cam.create_dataset('timestamps', dtype=float,
+        #     shape=(int(nframes * 1.1), ), chunks=(1, ))
+        # self.dset_cam = self.grp_cam.create_dataset('frames', dtype='uint8',
+        #     shape=(int(nframes * 1.1), dy, dx), chunks=(1, dy, dx))
+        # self.grp_cam.attrs['fps'] = fps
+        # self.grp_cam.attrs['exposure'] = exposure_time
+        # self.grp_cam.attrs['gain'] = self.var_gain.get()
+        # self.grp_cam.attrs['vsub'] = self.var_vsub.get()
+        # self.grp_cam.attrs['hsub'] = self.var_hsub.get()
+
+        self.grp_behav = self.data_file.create_group('behavior')
+        self.grp_behav.create_dataset(name='trials', dtype='uint32',
+            shape=(1000, ), chunks=(1, ))
+        self.grp_behav.create_dataset(name='trial_manual', dtype=bool,
+            shape=(1000, ), chunks=(1, ))
+        self.grp_behav.create_dataset(name='movement', dtype='int32',
+            shape=(2, int(nstepframes) * 1.1), chunks=(2, 1))
+
+        # Store session parameters into behavior group
+        for key, value in self.parameters.iteritems():
+            self.behav_grp.attrs[key] = value
 
         self.ser.flushInput()                                   # Remove data from serial input
         self.ser.write('E')                                     # Start signal for Arduino
