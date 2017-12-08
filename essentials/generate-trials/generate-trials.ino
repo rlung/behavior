@@ -93,8 +93,8 @@ void ShufflePlusMinus() {
   boolean temp;
   int new_pos;
   
-  for (int old_pos = 0; old_pos < trial_num; old_pos++) {
-    new_pos = random(old_pos, trial_num - 1);
+  for (int old_pos = 0; old_pos < trial_num - 1; old_pos++) {
+    new_pos = random(old_pos, trial_num);
     temp = csplus_trials[old_pos];
 
     csplus_trials[old_pos] = csplus_trials[new_pos];
