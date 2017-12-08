@@ -580,7 +580,7 @@ class InputManager(tk.Frame):
         #         q.queue.clear()
 
         # Create data file
-        if self.entry_save.get():
+        if self.entry_file.get():
             try:
                 # Create file if it doesn't already exist ('x' parameter)
                 self.data_file = h5py.File(self.entry_save.get(), 'x')
@@ -623,8 +623,6 @@ class InputManager(tk.Frame):
 
         self.ser.flushInput()                                   # Remove data from serial input
         self.ser.write('E')                                     # Start signal for Arduino
-
-
 
 
 def slack_msg(slack_recipient, msg, test=False, verbose=False):
