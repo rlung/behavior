@@ -16,7 +16,9 @@ Parameters for session are received via serial connection from Python GUI.  Data
 from hardware is routed directly back via serial connection to Python GUI for 
 recording and calculations.
 
-Example input: 3000+3000+3+1+1+3000+3000+60000+500+1000+500+100+0+500+500+1000+0+500+0+100
+Example inputs:
+3000+3000+3+1+1+3000+3000+60000+500+1000+500+1000+0+500+500+5000+0+500+0+100+50
+3000+3000+3+1+0+45000+3000+120000+500+1000+500+1000+0+500+500+5000+0+500+0+100+50
 */
 
 
@@ -47,7 +49,7 @@ const int code_lick = 1;
 const int code_track = 2;
 const int code_trial_start = 3;
 const int code_cs_start = 4;
-const int code_us_start = 4;
+const int code_us_start = 5;
 
 // Variables via serial
 unsigned long pre_session;
@@ -82,7 +84,6 @@ boolean *cs0_trials;
 unsigned long next_trial_ts;
 unsigned long trial_num;
 unsigned long trial_dur;
-unsigned long session_dur;
 volatile int track_change = 0;   // Rotations within tracking epochs
 volatile int lick_on = 0;        // Lick onset counter (shouldn't really exceed 1)
 volatile int lick_off = 0;       // Lick offest counter (shouldn't really exceed 1)
@@ -102,25 +103,19 @@ void Track() {
 
 void EndSession(unsigned long ts) {
   // Send "end" signal
-  Serial.print(code_end);
-  Serial.print(DELIM);
-  Serial.println(ts);
-  digitalWrite(pin_img_stop, HIGH);
+  SendSerial(code_end, ts, 0);
 
   // Reset pins
   digitalWrite(pin_img_start, LOW);
+  digitalWrite(pin_img_stop, HIGH);
   delay(IMGPINDUR);
   digitalWrite(pin_img_stop, LOW);
-
-  Serial.print("Session ended after ");
-  Serial.print(ts);
-  Serial.println(" ms");
 
   while (1);
 }
 
 
-int ExpDistro(unsigned int mean_val, unsigned int min_val, unsigned int max_val) {
+unsigned long ExpDistro(unsigned long mean_val, unsigned long min_val, unsigned long max_val) {
   float u;                                        // Random number from uniform distribution
   float max_factor = (float)max_val / mean_val;   // How many times greater is max from mean?
   float min_factor = (float)min_val / mean_val;   // How many times smaller is min from mean?
@@ -130,7 +125,7 @@ int ExpDistro(unsigned int mean_val, unsigned int min_val, unsigned int max_val)
   u = (float) random(0, 10000) / 10000;
   float rand_factor1 = 1 - exp(-(float)max_factor);   // Casting unnecessary?
   float rand_factor2 = -log(1 - rand_factor1 * u);
-  rand_factor = rand_factor2 + min_factor;
+  rand_factor = rand_factor2 + min_factor * (1 - u);
 
   return mean_val * rand_factor;
 }
@@ -152,7 +147,7 @@ void ShuffleTrials() {
   int new_pos;
   
   for (int old_pos = 0; old_pos < trial_num - 1; old_pos++) {
-    new_pos = random(old_pos, trial_num - 1);
+    new_pos = random(old_pos, trial_num);
     temp = cs0_trials[old_pos];
 
     cs0_trials[old_pos] = cs0_trials[new_pos];
@@ -265,7 +260,7 @@ void setup() {
 
     // Make sure min_iti is valid
     if (min_iti < trial_dur) min_iti = trial_dur;
-    
+
     next_trial_ts = (unsigned long) pre_session + ExpDistro(mean_iti, min_iti, max_iti);  // Casting unnecessary?
   }
 
@@ -375,7 +370,7 @@ void loop() {
 
     SendSerial(code_trial_start, ts, cs0_trials[trial_ix]);
   }
-  else if (! in_trial && ts >= session_dur) {
+  else if (trial_ix >= trial_num && ! in_trial && ts >= ts_trial_start + post_session) {
     EndSession(ts);
   }
 
