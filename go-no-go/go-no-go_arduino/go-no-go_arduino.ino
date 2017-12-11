@@ -52,6 +52,7 @@ const int code_cs_start = 4;
 const int code_us_start = 5;
 
 // Variables via serial
+unsigned int session_type;
 unsigned long pre_session;
 unsigned long post_session;
 int cs0_num;
@@ -64,20 +65,27 @@ unsigned long max_iti;
 unsigned long pre_stim;
 unsigned long post_stim;
 
-unsigned int cs0_dur;
-unsigned int cs0_freq;
-unsigned int us0_delay;
-unsigned int us0_dur;
-unsigned int cs1_dur;
-unsigned int cs1_freq;
-unsigned int us1_delay;
-unsigned int us1_dur;
+unsigned long cs0_dur;
+unsigned long cs0_freq;
+unsigned long us0_delay;
+unsigned long us0_dur;
+unsigned long cs1_dur;
+unsigned long cs1_freq;
+unsigned long us1_delay;
+unsigned long us1_dur;
+
+unsigned long trial_signal_offset;
+unsigned long trial_signal_dur;
+unsigned long trial_signal_freq;
+unsigned long grace_dur;
+unsigned long response_dur;
+unsigned long timeout_dur;
 
 boolean image_all;
 unsigned int image_ttl_dur;
 unsigned int track_period;
 
-unsigned int us_delay;
+unsigned long us_delay;
 
 // Other variables
 boolean *cs0_trials;
@@ -85,8 +93,8 @@ unsigned long next_trial_ts;
 unsigned long trial_num;
 unsigned long trial_dur;
 volatile int track_change = 0;   // Rotations within tracking epochs
-volatile int lick_on = 0;        // Lick onset counter (shouldn't really exceed 1)
-volatile int lick_off = 0;       // Lick offest counter (shouldn't really exceed 1)
+// volatile int lick_on = 0;        // Lick onset counter (shouldn't really exceed 1)
+// volatile int lick_off = 0;       // Lick offest counter (shouldn't really exceed 1)
 
 
 void Track() {
@@ -158,37 +166,45 @@ void ShuffleTrials() {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 21;
+  const int paramNum = 28;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
     parameters[p] = Serial.parseInt();
   }
 
-  pre_session = parameters[0];
-  post_session = parameters[1];
-  cs0_num = parameters[2];
-  cs1_num = parameters[3];
+  session_type = parameters[0];
+  pre_session = parameters[1];
+  post_session = parameters[2];
+  cs0_num = parameters[3];
+  cs1_num = parameters[4];
 
-  uniform_iti = parameters[4];
-  mean_iti = parameters[5];
-  min_iti = parameters[6];
-  max_iti = parameters[7];
-  pre_stim = parameters[8];
-  post_stim = parameters[9];
+  uniform_iti = parameters[5];
+  mean_iti = parameters[6];
+  min_iti = parameters[7];
+  max_iti = parameters[8];
+  pre_stim = parameters[9];
+  post_stim = parameters[10];
 
-  cs0_dur = parameters[10];
-  cs0_freq = parameters[11];
-  us0_delay = parameters[12];
-  us0_dur = parameters[13];
-  cs1_dur = parameters[14];
-  cs1_freq = parameters[15];
-  us1_delay = parameters[16];
-  us1_dur = parameters[17];
+  cs0_dur = parameters[11];
+  cs0_freq = parameters[12];
+  us0_delay = parameters[13];
+  us0_dur = parameters[14];
+  cs1_dur = parameters[15];
+  cs1_freq = parameters[16];
+  us1_delay = parameters[17];
+  us1_dur = parameters[18];
 
-  image_all = parameters[18];
-  image_ttl_dur = parameters[19];
-  track_period = parameters[20];
+  trial_signal_offset = parameters[19];
+  trial_signal_dur = parameters[20];
+  trial_signal_freq = parameters[21];
+  grace_dur = parameters[22];
+  response_dur = parameters[23];
+  timeout_dur = parameters[24];
+
+  image_all = parameters[25];
+  image_ttl_dur = parameters[26];
+  track_period = parameters[27];
 
   us_delay = us0_delay;
   trial_num = cs0_num + cs1_num;
@@ -249,7 +265,7 @@ void setup() {
   );
   while (Serial.available() <= 0);
   GetParams();
-  Serial.println("Paremeters processed");
+  Serial.println("Parameters processed");
 
   // First trial
   if (uniform_iti) {
