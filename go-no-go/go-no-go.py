@@ -10,6 +10,7 @@ imaging. Script interfaces with Arduino microcontroller and imaging devices.
 import matplotlib
 matplotlib.use('TKAgg')
 import Tkinter as tk
+import tkFont
 import tkMessageBox
 import tkFileDialog
 from ScrolledText import ScrolledText
@@ -56,8 +57,10 @@ class InputManager(tk.Frame):
         #   + frame_cam
         #   + frame_debug
         #   + frame_params
+        #     ~ frame_session_type
         #     ~ frame_session
         #     ~ frame_trial
+        #     ~ frame_gonogo
         #     ~ frame_csus0
         #     ~ frame_csus1
         #     ~ frame_misc
@@ -109,8 +112,10 @@ class InputManager(tk.Frame):
         frame_arduino.grid(row=1, column=0, padx=px, pady=py)
         frame_arduino1 = tk.Frame(frame_arduino)
         frame_arduino2 = tk.Frame(frame_arduino)
-        frame_arduino1.grid(row=0, column=0, padx=px, pady=py)
-        frame_arduino2.grid(row=1, column=0, padx=px, pady=py)
+        frame_arduino1.grid(row=0, column=0, sticky='we', padx=px, pady=py)
+        frame_arduino2.grid(row=1, column=0, sticky='we', padx=px, pady=py)
+        frame_arduino2.grid_columnconfigure(0, weight=1)
+        frame_arduino2.grid_columnconfigure(1, weight=1)
 
         ### Debug frame
         frame_debug = tk.LabelFrame(frame_setup_col0, text='Debug')
@@ -121,16 +126,20 @@ class InputManager(tk.Frame):
         frame_params.grid(row=0, column=0, rowspan=3, padx=px, pady=py)
         frame_params.columnconfigure(0, weight=1)
 
+        frame_session_type = tk.Frame(frame_params)
         frame_session = tk.Frame(frame_params)
         frame_trial = tk.Frame(frame_params)
         frame_csus0 = tk.Frame(frame_params)
         frame_csus1 = tk.Frame(frame_params)
+        frame_gonogo = tk.Frame(frame_params)
         frame_misc = tk.Frame(frame_params)
-        frame_session.grid(row=0, column=0, sticky='e', padx=px, pady=py)
-        frame_trial.grid(row=1, column=0, sticky='e', padx=px, pady=py)
-        frame_csus0.grid(row=2, column=0, sticky='e', padx=px, pady=py)
-        frame_csus1.grid(row=3, column=0, sticky='e', padx=px, pady=py)
-        frame_misc.grid(row=4, column=0, sticky='e', padx=px, pady=py)
+        frame_session_type.grid(row=0, column=0, sticky='e', padx=px, pady=py)
+        frame_session.grid(row=1, column=0, sticky='e', padx=px, pady=py)
+        frame_trial.grid(row=2, column=0, sticky='e', padx=px, pady=py)
+        frame_csus0.grid(row=3, column=0, sticky='e', padx=px, pady=py)
+        frame_csus1.grid(row=4, column=0, sticky='e', padx=px, pady=py)
+        frame_gonogo.grid(row=5, column=0, sticky='e', padx=px, pady=py)
+        frame_misc.grid(row=6, column=0, sticky='e', padx=px, pady=py)
 
         ### Notes frame
         frame_notes = tk.Frame(frame_setup_col2)
@@ -185,8 +194,8 @@ class InputManager(tk.Frame):
         self.button_update_ports = tk.Button(frame_arduino1, text='u', command=self.update_ports)
         self.button_open_port = tk.Button(frame_arduino2, text='Open', command=self.open_serial)
         self.button_close_port = tk.Button(frame_arduino2, text='Close', command=self.close_serial)
-        tk.Label(frame_arduino1, text='Port: ').grid(row=0, column=0, sticky='e', padx=px1)
-        tk.Label(frame_arduino1, text='State: ').grid(row=1, column=0, sticky='e', padx=px1)
+        tk.Label(frame_arduino1, text='Port: ').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_arduino1, text='State: ').grid(row=1, column=0, sticky='e')
         self.option_ports.grid(row=0, column=1, sticky='we', padx=px1)
         self.entry_serial_status.grid(row=1, column=1, sticky='w', padx=px1)
         self.button_update_ports.grid(row=0, column=2, pady=py)
@@ -207,16 +216,26 @@ class InputManager(tk.Frame):
         ## frame_params
         ## Session parameters
 
+        ### frame_session_type
+        ### UI for choosing session type, ie, classical conditining vs go/no go.
+        self.var_session_type = tk.IntVar()
+        self.radio_conditioning = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=0)
+        self.radio_gonogo = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=1)
+        tk.Label(frame_session_type, text='Classical conditioning: ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_session_type, text='Go/no go: ', anchor='e').grid(row=1, column=0, sticky='e')
+        self.radio_conditioning.grid(row=0, column=1, sticky='w')
+        self.radio_gonogo.grid(row=1, column=1, sticky='w')
+
         ### frame_session
         ### UI for session.
         self.entry_cs0_num = tk.Entry(frame_session, width=entry_width)
         self.entry_cs1_num = tk.Entry(frame_session, width=entry_width)
         self.entry_pre_session = tk.Entry(frame_session, width=entry_width)
         self.entry_post_session = tk.Entry(frame_session, width=entry_width)
-        tk.Label(frame_session, text="Presession time (ms): ", anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_session, text="Postsession time (ms): ", anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_session, text="Number of CS0: ", anchor='e').grid(row=2, column=0, sticky='e')
-        tk.Label(frame_session, text="Number of CS1: ", anchor='e').grid(row=3, column=0, sticky='e')
+        tk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
+        tk.Label(frame_session, text='Number of CS1: ', anchor='e').grid(row=3, column=0, sticky='e')
         self.entry_pre_session.grid(row=0, column=1, sticky='w')
         self.entry_post_session.grid(row=1, column=1, sticky='w')
         self.entry_cs0_num.grid(row=2, column=1, sticky='w')
@@ -231,18 +250,18 @@ class InputManager(tk.Frame):
         self.entry_pre_stim = tk.Entry(frame_trial, width=entry_width)
         self.entry_post_stim = tk.Entry(frame_trial, width=entry_width)
         self.check_uniform_iti = tk.Checkbutton(frame_trial, variable=self.var_uniform_iti)
-        tk.Label(frame_trial, text='Uniform ITI: ', anchor='e').grid(row=4, column=0, sticky='e')
-        tk.Label(frame_trial, text='Mean ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
-        tk.Label(frame_trial, text='Min ITI (ms): ', anchor='e').grid(row=6, column=0, sticky='e')
-        tk.Label(frame_trial, text='Max ITI (ms): ', anchor='e').grid(row=7, column=0, sticky='e')
-        tk.Label(frame_trial, text='Prestim time (ms): ', anchor='e').grid(row=8, column=0, sticky='e')
-        tk.Label(frame_trial, text='Poststim time (ms): ', anchor='e').grid(row=9, column=0, sticky='e')
-        self.check_uniform_iti.grid(row=4, column=1, sticky='w')
-        self.entry_mean_iti.grid(row=5, column=1, sticky='w')
-        self.entry_min_iti.grid(row=6, column=1, sticky='w')
-        self.entry_max_iti.grid(row=7, column=1, sticky='w')
-        self.entry_pre_stim.grid(row=8, column=1, sticky='w')
-        self.entry_post_stim.grid(row=9, column=1, sticky='w')
+        tk.Label(frame_trial, text='Uniform ITI: ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_trial, text='Mean ITI (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_trial, text='Min ITI (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
+        tk.Label(frame_trial, text='Max ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
+        tk.Label(frame_trial, text='Prestim time (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
+        tk.Label(frame_trial, text='Poststim time (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
+        self.check_uniform_iti.grid(row=0, column=1, sticky='w')
+        self.entry_mean_iti.grid(row=1, column=1, sticky='w')
+        self.entry_min_iti.grid(row=2, column=1, sticky='w')
+        self.entry_max_iti.grid(row=3, column=1, sticky='w')
+        self.entry_pre_stim.grid(row=4, column=1, sticky='w')
+        self.entry_post_stim.grid(row=5, column=1, sticky='w')
 
         ### frame_csus0
         ### UI for CS-US 0.
@@ -273,6 +292,27 @@ class InputManager(tk.Frame):
         self.entry_cs1_freq.grid(row=15, column=1, sticky='w')
         self.entry_us1_delay.grid(row=16, column=1, sticky='w')
         self.entry_us1_dur.grid(row=17, column=1, sticky='w')
+
+        ### frame_gonogo
+        ### UI for trial start (signal)
+        self.entry_trial_signal_offset = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_trial_signal_dur = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_trial_signal_freq = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_grace_dur = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_response_dur = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_timeout_dur = tk.Entry(frame_gonogo, width=entry_width)
+        tk.Label(frame_gonogo, text='Trial signal offset (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='Trial signal duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='Trial signal frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=2, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='Grace period (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='Response window (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='Timeout duration (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
+        self.entry_trial_signal_offset.grid(row=0, column=1, sticky='w')
+        self.entry_trial_signal_dur.grid(row=1, column=1, sticky='w')
+        self.entry_trial_signal_freq.grid(row=2, column=1, sticky='w')
+        self.entry_grace_dur.grid(row=3, column=1, sticky='w')
+        self.entry_response_dur.grid(row=4, column=1, sticky='w')
+        self.entry_timeout_dur.grid(row=5, column=1, sticky='w')
 
         ### frame_misc
         ### UI for other things.
@@ -336,10 +376,12 @@ class InputManager(tk.Frame):
             self.option_ports,
             self.button_open_port,
             self.button_update_ports,
-            self.entry_cs0_num,
-            self.entry_cs1_num,
+            self.radio_conditioning,
+            self.radio_gonogo,
             self.entry_pre_session,
             self.entry_post_session,
+            self.entry_cs0_num,
+            self.entry_cs1_num,
             self.check_uniform_iti,
             self.entry_mean_iti,
             self.entry_min_iti,
@@ -354,6 +396,12 @@ class InputManager(tk.Frame):
             self.entry_cs1_freq,
             self.entry_us1_delay,
             self.entry_us1_dur,
+            self.entry_trial_signal_offset,
+            self.entry_trial_signal_dur,
+            self.entry_trial_signal_freq,
+            self.entry_grace_dur,
+            self.entry_response_dur,
+            self.entry_timeout_dur,
             self.check_image_all,
             self.entry_image_ttl_dur,
             self.entry_track_period,
@@ -401,6 +449,13 @@ class InputManager(tk.Frame):
         self.entry_cs1_freq.insert(0, 1000)
         self.entry_us1_delay.insert(0, 0)
         self.entry_us1_dur.insert(0, 500)
+
+        self.entry_trial_signal_offset.insert(0, 1000)
+        self.entry_trial_signal_dur.insert(0, 100)
+        self.entry_trial_signal_freq.insert(0, 0)
+        self.entry_grace_dur.insert(0, 2000)
+        self.entry_response_dur.insert(0, 2000)
+        self.entry_timeout_dur.insert(0, 8000)
 
         self.var_image_all.set(0)
         self.entry_image_ttl_dur.insert(0, 100)
@@ -487,13 +542,14 @@ class InputManager(tk.Frame):
             # Serial opened successfully
             time.sleep(delay)
             self.gui_util('opened')
-            print('Connection to Arduino opened')
+            if self.var_verbose.get(): print('Connection to Arduino opened')
 
         # Send parameters to Arduino
 
         # Define parameters
         # NOTE: Order is important here since this order is preserved when 
         # sending via serial.
+        self.parameters['session_type'] = self.var_session_type.get()
         self.parameters['pre_session'] = self.entry_pre_session.get()
         self.parameters['post_session'] = self.entry_post_session.get()
         self.parameters['cs0_num'] = self.entry_cs0_num.get()
@@ -515,6 +571,13 @@ class InputManager(tk.Frame):
         self.parameters['us1_delay'] = self.entry_us1_delay.get()
         self.parameters['us1_dur'] = self.entry_us1_dur.get()
 
+        self.parameters['trial_signal_offset'] = self.entry_trial_signal_offset.get()
+        self.parameters['trial_signal_dur'] = self.entry_trial_signal_dur.get()
+        self.parameters['trial_signal_freq'] = self.entry_trial_signal_freq.get()
+        self.parameters['grace_dur'] = self.entry_grace_dur.get()
+        self.parameters['response_dur'] = self.entry_response_dur.get()
+        self.parameters['timeout_dur'] = self.entry_timeout_dur.get()
+
         self.parameters['image_all'] = self.var_image_all.get()
         self.parameters['image_ttl_dur'] = self.entry_image_ttl_dur.get()
         self.parameters['track_period'] = self.entry_track_period.get()
@@ -522,14 +585,16 @@ class InputManager(tk.Frame):
         # Cast parameters to int
         self.parameters = {key: int(val) for key, val in self.parameters.iteritems()}
 
-        send_status = send_to_arduino(self.ser, self.parameters, self.var_verbose.get())
+        send_status = send_to_arduino(self.ser, self.parameters, verbose=self.var_verbose.get())
         if send_status:
             print('Error sending parameters to Arduino')
             print(send_status)
             self.gui_util('close')
+            self.close_serial()
         else:
-            print('Parameters uploaded to Arduino')
-            print('Ready to start')
+            if self.var_verbose.get():
+                print('Parameters uploaded to Arduino')
+                print('Ready to start')
 
 
     def close_serial(self):
@@ -538,7 +603,7 @@ class InputManager(tk.Frame):
         '''
         self.ser.close()
         self.gui_util('close')
-        print('Connection to Arduino closed.')
+        if self.var_verbose.get(): print('Connection to Arduino closed')
 
     def update_ports(self):
         '''Updates list of available ports
@@ -646,15 +711,27 @@ def send_to_arduino(ser, params, timeout=5, verbose=False):
     '''Write parameters to Arduino
     Sends parameters over serial as numbers (integers). Delimited by '+'.
     '''
-    ser.flushInput()            # Remove opening message from serial
+
+    # Handle opening message from serial
+    if verbose:
+        while ser.in_waiting:
+            sys.stdout.write('[a]\t' + ser.readline())
+    else:
+        ser.flushInput()
     
     values = params.values()
-    if verbose: print(values)
+    if verbose: print('Sending parameters: {}'.format(values))
     
     ser.write('+'.join(str(s) for s in values))
     start_time = time.time()
+
     while 1:
-        if ser.read(): break
+        if ser.in_waiting:
+            if verbose:
+                # Print incoming data
+                while ser.in_waiting:
+                    sys.stdout.write('[a]\t' + ser.readline())
+            break
         elif time.time() >= start_time + timeout:
             err_msg = 'Uploading timed out. Start signal not found.'
             return serial.SerialException(err_msg)
@@ -886,6 +963,9 @@ def main():
     # GUI
     root = tk.Tk()
     root.wm_title("Go/no go")
+    # default_font = tkFont.nametofont('TkDefaultFont')
+    # default_font.configure(family='Arial')
+    # root.option_add('*Font', default_font)
     InputManager(root)
     root.grid()
     root.mainloop()
