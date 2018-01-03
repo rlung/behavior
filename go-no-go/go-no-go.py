@@ -481,8 +481,8 @@ class InputManager(tk.Frame):
         self.entry_us1_delay.insert(0, 100)
         self.entry_us1_dur.insert(0, 500)
 
-        self.entry_trial_signal_offset.insert(0, 500)
-        self.entry_trial_signal_dur.insert(0, 100)
+        self.entry_trial_signal_offset.insert(0, 1000)
+        self.entry_trial_signal_dur.insert(0, 200)
         self.entry_trial_signal_freq.insert(0, 0)
         self.entry_grace_dur.insert(0, 2000)
         self.entry_response_dur.insert(0, 2000)
