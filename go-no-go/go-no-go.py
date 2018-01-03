@@ -708,6 +708,43 @@ class InputManager(ttk.Frame):
         # once serial is closed.
         self.obj_enabled_at_open = [False] * len(self.obj_to_disable_at_open)
 
+        # Default values
+
+        ## Session values
+        ## Example: 0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
+        self.var_session_type.set(0)
+        self.entry_pre_session.insert(0, 5000)
+        self.entry_post_session.insert(0, 5000)
+        self.entry_cs0_num.insert(0, 3)
+        self.entry_cs1_num.insert(0, 1)
+        
+        self.var_uniform_iti.set(0)
+        self.entry_mean_iti.insert(0, 60000)
+        self.entry_min_iti.insert(0, 17000)
+        self.entry_max_iti.insert(0, 360000)
+        self.entry_pre_stim.insert(0, 5000)
+        self.entry_post_stim.insert(0, 10000)
+        
+        self.entry_cs0_dur.insert(0, 500)
+        self.entry_cs0_freq.insert(0, 1000)
+        self.entry_us0_delay.insert(0, 100)
+        self.entry_us0_dur.insert(0, 500)
+        self.entry_cs1_dur.insert(0, 500)
+        self.entry_cs1_freq.insert(0, 5000)
+        self.entry_us1_delay.insert(0, 100)
+        self.entry_us1_dur.insert(0, 500)
+
+        self.entry_trial_signal_offset.insert(0, 1000)
+        self.entry_trial_signal_dur.insert(0, 200)
+        self.entry_trial_signal_freq.insert(0, 0)
+        self.entry_grace_dur.insert(0, 2000)
+        self.entry_response_dur.insert(0, 2000)
+        self.entry_timeout_dur.insert(0, 8000)
+
+        self.var_image_all.set(0)
+        self.entry_image_ttl_dur.insert(0, 100)
+        self.entry_track_period.insert(0, 50)
+
         # Finalize
         self.update_param_preview()
         self.parameters = collections.OrderedDict()

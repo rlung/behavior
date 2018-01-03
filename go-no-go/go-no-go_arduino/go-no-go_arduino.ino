@@ -16,14 +16,13 @@ Parameters for session are received via serial connection from Python GUI.  Data
 from hardware is routed directly back via serial connection to Python GUI for 
 recording and calculations.
 
-Outputs are coded as [type of information, timestamp, data]. Many of the trial 
-data has `data` encoded as the CS type. Response is coded with CS type and lick 
-or not (CS is second bit, lick is first bit, eg, 3 is CS 1, lick; 2 is CS 1 no 
-lick).
+Example inputs:
+0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
+0+3000+3000+3+1 + 0+45000+3000+120000+1000+1000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
 
-Example input:
-0, 60000, 60000, 20, 20, 0, 1, 60000, 40000, 80000, 7000, 13000, 2000, 3000, 0, 50, 3000, 2000, 6000, 0, 50, 3000, 2000, 12000, 0, 50, 3000, 8000, 100, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
 
+TODO
+switch bw classical conditioning and go no go
 */
 
 
@@ -337,11 +336,13 @@ void setup() {
   // Set pins
   pinMode(pin_track_a, INPUT);
   pinMode(pin_track_b, INPUT);
-  pinMode(pin_vac, OUTPUT);
+
+  // pinMode(pin_lick, INPUT);
   pinMode(pin_sol_0, OUTPUT);
   pinMode(pin_sol_1, OUTPUT);
-  pinMode(pin_sol_2, OUTPUT);
+
   pinMode(pin_signal, OUTPUT);
+
   pinMode(pin_img_start, OUTPUT);
   pinMode(pin_img_stop, OUTPUT);
 
@@ -409,16 +410,93 @@ void loop() {
   LookForSignal(0, ts);
 
   // -- 1. TRIAL CONTROL -- //
-  switch (session_type) {
-    case code_classical_conditioning:
-      ClassicalConditioning(ts, lick_count);
-      break;
-    case code_go_nogo:
-      GoNogo(ts, lick_count);
-      break;
-    case code_free_licking:
-      FreeLicking(ts, lick_count);
-      break;
+
+  // Check for trial start or session end
+  if (trial_ix < trial_num && ! in_trial && ts >= next_trial_ts) {
+    // Beginning of trial
+    in_trial = true;
+
+    // Determine CS/US parameters
+    if (cs_trial_types[trial_ix] == 0) {
+      trial_tone_freq = cs0_freq;
+      trial_tone_dur = cs0_dur;
+      trial_sol_pin = pin_sol_0;
+      trial_sol_dur = us0_dur;
+    }
+    else if (cs_trial_types[trial_ix] == 1) {
+      trial_tone_freq = cs1_freq;
+      trial_tone_dur = cs1_dur;
+      trial_sol_pin = pin_sol_1;
+      trial_sol_dur = us1_dur;
+    }
+
+    // Determine timestamps for events
+    ts_trial_start = ts;
+    ts_trial_signal = ts_trial_start + pre_stim - trial_signal_offset;
+    ts_stim = ts_trial_start + pre_stim;
+    ts_response_window = ts_stim + grace_dur;
+    ts_timeout = ts_response_window + response_dur;
+    ts_trial_end = ts_trial_start + trial_dur;
+
+    // Start imaging (if applicable)
+    if (! image_all) digitalWrite(pin_img_start, HIGH);
+
+    behav.SendData(stream, code_trial_start, ts, cs_trial_types[trial_ix]);
+  }
+  else if (trial_ix >= trial_num && ! in_trial && ts >= ts_trial_start + post_session) {
+    EndSession(ts);
+  }
+
+  // Control trial events (when in trial)
+  if (in_trial) {
+    if (! signaled && ts >= ts_trial_signal) {
+      signaled = true;
+      digitalWrite(pin_signal, HIGH);
+      behav.SendData(stream, code_trial_signal, ts, cs_trial_types[trial_ix]);
+    }
+    if (! stimmed && ts >= ts_stim) {
+      // Present CS
+      stimmed = true;
+      tone(pin_tone, trial_tone_freq, trial_tone_dur);
+      behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
+    }
+    if (! rewarded && ts >= ts_response_window && ts < ts_timeout) {
+      if (! response_started) {
+        response_started = true;
+        response_licks = 0;
+      }
+      else {
+        // Deliver reward
+        if (response_licks) {
+          response_ended = true;
+          rewarded = true;
+          ts_us = ts;
+          digitalWrite(trial_sol_pin, HIGH);
+          behav.SendData(stream, code_us_start, ts, cs_trial_types[trial_ix]);
+          behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 1);
+        }
+      }
+    }
+    if (! response_ended && ts >= ts_timeout) {
+      response_ended = true;
+      behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 0);
+    }
+    if (ts >= ts_trial_end) {
+      // Determine next trial
+      if (uniform_iti) next_trial_ts += mean_iti;
+      else next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
+      behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[trial_ix + 1]);  // Still need to correct for last trial
+
+      // Reset trial features
+      in_trial = false;
+      signaled = false;
+      stimmed = false;
+      response_started = false;
+      response_ended = false;
+      rewarded = false;
+      trial_ix++;
+      if (! image_all) digitalWrite(pin_img_stop, HIGH);
+    }
   }
 
   // -- 2. TRACK MOVEMENT -- //
@@ -438,7 +516,7 @@ void loop() {
   boolean lick_state_now;
   // lick_state_now = digitalRead(pin_lick);
   int lick_reading = analogRead(pin_lick);
-  if (lick_reading < LICK_REC_THRESHOLD) behav.SendData(stream, code_lick_form, ts, lick_reading);
+
   if (lick_reading < LICK_THRESHOLD) lick_state_now = true;
   else lick_state_now = false;
 
