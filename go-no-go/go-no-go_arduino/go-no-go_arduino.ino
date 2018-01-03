@@ -17,16 +17,20 @@ from hardware is routed directly back via serial connection to Python GUI for
 recording and calculations.
 
 Example inputs:
-3000+3000+3+1+1+3000+3000+60000+500+1000+500+1000+0+500+500+5000+0+500+0+100+50
-3000+3000+3+1+0+45000+3000+120000+500+1000+500+1000+0+500+500+5000+0+500+0+100+50
+0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
+0+3000+3000+3+1 + 0+45000+3000+120000+1000+1000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
 */
 
 
+#include <Behavior.h>
+
+#define LICK_THRESHOLD 100
 #define IMGPINDUR 100     // Length of imaging signal pulse
 #define CODEEND 48
 #define STARTCODE 69
 #define CODETRIAL 70
 #define DELIM ","         // Delimiter used for serial communication
+#define DEBUG 1
 
 
 // Pins
@@ -37,6 +41,7 @@ const int pin_lick = 3;
 const int pin_sol_0 = 5;
 const int pin_sol_1 = 6;
 
+const int pin_signal = 8;
 const int pin_tone = 7;
 
 const int pin_img_start = 9;
@@ -48,8 +53,11 @@ const int code_end = 0;
 const int code_lick = 1;
 const int code_track = 2;
 const int code_trial_start = 3;
-const int code_cs_start = 4;
-const int code_us_start = 5;
+const int code_trial_signal = 4;
+const int code_cs_start = 5;
+const int code_us_start = 6;
+const int code_response = 7;
+const int code_next_trial = 8;
 
 // Variables via serial
 unsigned int session_type;
@@ -88,13 +96,14 @@ unsigned int track_period;
 unsigned long us_delay;
 
 // Other variables
-boolean *cs0_trials;
+int *cs_trial_types;
 unsigned long next_trial_ts;
 unsigned long trial_num;
 unsigned long trial_dur;
 volatile int track_change = 0;   // Rotations within tracking epochs
-// volatile int lick_on = 0;        // Lick onset counter (shouldn't really exceed 1)
-// volatile int lick_off = 0;       // Lick offest counter (shouldn't really exceed 1)
+
+Behavior behav;
+Stream &stream = Serial;
 
 
 void Track() {
@@ -103,15 +112,10 @@ void Track() {
   else track_change--;
 }
 
-// void Lick() {
-//   if (digitalRead(pin_lick)) lick_on++;
-//   else lick_off++;
-// }
-
 
 void EndSession(unsigned long ts) {
   // Send "end" signal
-  SendSerial(code_end, ts, 0);
+  behav.SendData(stream, code_end, ts, 0);
 
   // Reset pins
   digitalWrite(pin_img_start, LOW);
@@ -120,47 +124,6 @@ void EndSession(unsigned long ts) {
   digitalWrite(pin_img_stop, LOW);
 
   while (1);
-}
-
-
-unsigned long ExpDistro(unsigned long mean_val, unsigned long min_val, unsigned long max_val) {
-  float u;                                        // Random number from uniform distribution
-  float max_factor = (float)max_val / mean_val;   // How many times greater is max from mean?
-  float min_factor = (float)min_val / mean_val;   // How many times smaller is min from mean?
-  float rand_factor;                              // Multiply with `mean_val` to get ITI
-
-  // Transform uniform distribution to exponential
-  u = (float) random(0, 10000) / 10000;
-  float rand_factor1 = 1 - exp(-(float)max_factor);   // Casting unnecessary?
-  float rand_factor2 = -log(1 - rand_factor1 * u);
-  rand_factor = rand_factor2 + min_factor * (1 - u);
-
-  return mean_val * rand_factor;
-}
-
-
-void ShuffleTrials() {
-  // Shuffle CS0 & CS1 trials
-  
-  // Create boolean mask for CS+ trials (not shuffled yet)
-  for (int tt = 0; tt < trial_num; tt++) {
-    if (tt < cs0_num) cs0_trials[tt] = true;
-    else cs0_trials[tt] = false;
-  }
-
-  // Shuffle boolean array
-  // Iterate over elements in `cs0_trials` (except last one). For each 
-  // element, find a new (or same) position in elements after and switch.
-  boolean temp;
-  int new_pos;
-  
-  for (int old_pos = 0; old_pos < trial_num - 1; old_pos++) {
-    new_pos = random(old_pos, trial_num);
-    temp = cs0_trials[old_pos];
-
-    cs0_trials[old_pos] = cs0_trials[new_pos];
-    cs0_trials[new_pos] = temp;
-  }
 }
 
 
@@ -227,22 +190,6 @@ void WaitForStart() {
 }
 
 
-void Tone(int pin, unsigned int freq, unsigned int dur) {
-  // Turn off all tones befor playing to ensure next one will play
-  noTone(pin);
-  tone(pin, freq, dur);
-}
-
-
-void SendSerial(unsigned int code, unsigned long ts, long data) {
-  Serial.print(code);
-  Serial.print(DELIM);
-  Serial.print(ts);
-  Serial.print(DELIM);
-  Serial.println(data);
-}
-
-
 void setup() {
   Serial.begin(9600);
   randomSeed(analogRead(0));
@@ -273,16 +220,18 @@ void setup() {
   }
   else {
     // Create ITIs from an exponential distribution
-
-    // Make sure min_iti is valid
-    if (min_iti < trial_dur) min_iti = trial_dur;
-
-    next_trial_ts = (unsigned long) pre_session + ExpDistro(mean_iti, min_iti, max_iti);  // Casting unnecessary?
+    if (min_iti < trial_dur) min_iti = trial_dur;   // Make sure min_iti is valid
+    next_trial_ts = (unsigned long) pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);  // Casting unnecessary?
   }
 
   // Shuffle trials
-  cs0_trials = new () boolean[trial_num];
-  ShuffleTrials();
+  cs_trial_types = new () int[trial_num];
+  for (int tt = 0; tt < trial_num; tt++) {
+    // Assign appropriate number of CS+ trials
+    if (tt < cs0_num) cs_trial_types[tt] = 0;
+    else cs_trial_types[tt] = 1;
+  }
+  behav.Shuffle(cs_trial_types, trial_num);
 
   // Wait for start signal
   Serial.println("Waiting for start signal ('E')");
@@ -291,9 +240,10 @@ void setup() {
   // Set interrupt
   // Do not set earlier; `Track` will be called before session starts.
   attachInterrupt(digitalPinToInterrupt(pin_track_a), Track, RISING);
-  // attachInterrupt(digitalPinToInterrupt(pin_lick), Lick, CHANGE);
-  digitalWrite(pin_img_start, HIGH);
+
+  if (image_all) digitalWrite(pin_img_start, HIGH);
   Serial.println("Session started\n");
+  behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[0]);
 }
 
 
@@ -304,10 +254,13 @@ void loop() {
   static unsigned long img_stop_ts;
   static unsigned long next_track_ts = track_period;  // Timer used for motion tracking and conveyor movement
 
-  static boolean manual_trial;
+  static unsigned int response_licks;
   static unsigned long ts_trial_start;
+  static unsigned long ts_trial_signal;
   static unsigned long ts_stim;
+  static unsigned long ts_response_window;
   static unsigned long ts_us;
+  static unsigned long ts_timeout;
   static unsigned long ts_trial_end;
   static unsigned int trial_ix;
   static unsigned int trial_tone_freq;    // Defines tone frequency for trial
@@ -315,7 +268,10 @@ void loop() {
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
   static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
   static boolean in_trial;
+  static boolean signaled;
   static boolean stimmed;
+  static boolean response_started;
+  static boolean response_ended;
   static boolean rewarded;
   static boolean lick_state;
   static boolean reward_signal;           // Indicates if criterion for reward met (eg, lick on Go)
@@ -327,6 +283,7 @@ void loop() {
   // Turn off events
   if (ts >= img_start_ts + IMGPINDUR) digitalWrite(pin_img_start, LOW);
   if (ts >= img_stop_ts + IMGPINDUR) digitalWrite(pin_img_stop, LOW);
+  if (ts >= ts_trial_signal + trial_signal_dur) digitalWrite(pin_signal, LOW);
   if (ts >= ts_us + trial_sol_dur) digitalWrite(trial_sol_pin, LOW);
 
   // -- SESSION CONTROL -- //
@@ -358,7 +315,7 @@ void loop() {
     in_trial = true;
 
     // Determine CS/US parameters
-    if (cs0_trials[trial_ix]) {
+    if (cs_trial_types[trial_ix]) {
       trial_tone_freq = cs0_freq;
       trial_tone_dur = cs0_dur;
       trial_sol_pin = pin_sol_0;
@@ -373,18 +330,16 @@ void loop() {
 
     // Determine timestamps for events
     ts_trial_start = ts;
+    ts_trial_signal = ts_trial_start + pre_stim - trial_signal_offset;
     ts_stim = ts_trial_start + pre_stim;
-    ts_us = ts_stim + us_delay;
+    ts_response_window = ts_stim + grace_dur;
+    ts_timeout = ts_response_window + response_dur;
     ts_trial_end = ts_trial_start + trial_dur;
 
     // Start imaging (if applicable)
     if (! image_all) digitalWrite(pin_img_start, HIGH);
 
-    // Determine next trial
-    if (uniform_iti) next_trial_ts += mean_iti;
-    else next_trial_ts += ExpDistro(mean_iti, min_iti, max_iti);
-
-    SendSerial(code_trial_start, ts, cs0_trials[trial_ix]);
+    behav.SendData(stream, code_trial_start, ts, cs_trial_types[trial_ix]);
   }
   else if (trial_ix >= trial_num && ! in_trial && ts >= ts_trial_start + post_session) {
     EndSession(ts);
@@ -392,22 +347,49 @@ void loop() {
 
   // Control trial events (when in trial)
   if (in_trial) {
+    if (! signaled && ts >= ts_trial_signal) {
+      signaled = true;
+      digitalWrite(pin_signal, HIGH);
+      behav.SendData(stream, code_trial_signal, ts, cs_trial_types[trial_ix]);
+    }
     if (! stimmed && ts >= ts_stim) {
       // Present CS
       stimmed = true;
-      Tone(pin_tone, trial_tone_freq, trial_tone_dur);
-      SendSerial(code_cs_start, ts, cs0_trials[trial_ix]);
+      tone(pin_tone, trial_tone_freq, trial_tone_dur);
+      behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
     }
-    if (! rewarded && ts >= ts_us) {
-      // Deliver reward
-      rewarded = true;
-      digitalWrite(trial_sol_pin, HIGH);
-      SendSerial(code_us_start, ts, cs0_trials[trial_ix]);
+    if (! rewarded && ts >= ts_response_window && ts < ts_timeout) {
+      if (! response_started) {
+        response_started = true;
+        response_licks = 0;
+      }
+      else {
+        // Deliver reward
+        if (response_licks) {
+          response_ended = true;
+          rewarded = true;
+          digitalWrite(trial_sol_pin, HIGH);
+          behav.SendData(stream, code_us_start, ts, cs_trial_types[trial_ix]);
+          behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 1);
+        }
+      }
+    }
+    if (! response_ended && ts >= ts_timeout) {
+      response_ended = true;
+      behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 0);
     }
     if (ts >= ts_trial_end) {
-      // End trial
+      // Determine next trial
+      if (uniform_iti) next_trial_ts += mean_iti;
+      else next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
+      behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[trial_ix + 1]);  // Still need to correct for last trial
+
+      // Reset trial features
       in_trial = false;
+      signaled = false;
       stimmed = false;
+      response_started = false;
+      response_ended = false;
       rewarded = false;
       trial_ix++;
       if (! image_all) digitalWrite(pin_img_stop, HIGH);
@@ -419,7 +401,7 @@ void loop() {
   if (ts >= next_track_ts) {
     // Check for movement
     if (track_change != 0) {
-      SendSerial(code_track, ts, track_change);
+      behav.SendData(stream, code_track, ts, track_change);
       track_change = 0;
     }
     
@@ -429,11 +411,22 @@ void loop() {
 
   // -- 3. TRACK LICING -- //
 
+  // Get lick state
   boolean lick_state_now = digitalRead(pin_lick);
+  // int lick_reading = analogRead(pin_lick);
+  // if (lick_reading < LICK_THRESHOLD) boolean lick_state_now = true;
+  // else boolean lick_state_now = false;
+
+  // Determine if state changed
   if (lick_state_now != lick_state) {
     // Check if change in state is onset or offset
-    if (lick_state_now) SendSerial(code_lick, ts, 1);
-    else SendSerial(code_lick, ts, 0);
+    if (lick_state_now) {
+      response_licks++;
+      behav.SendData(stream, code_lick, ts, 1);
+    }
+    else {
+      behav.SendData(stream, code_lick, ts, 0);
+    }
   }
   lick_state = lick_state_now;
 }
