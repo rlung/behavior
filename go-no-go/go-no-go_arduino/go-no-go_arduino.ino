@@ -19,6 +19,10 @@ recording and calculations.
 Example inputs:
 0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
 0+3000+3000+3+1 + 0+45000+3000+120000+1000+1000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
+
+
+TODO
+switch bw classical conditioning and go no go
 */
 
 
@@ -198,9 +202,11 @@ void setup() {
   pinMode(pin_track_a, INPUT);
   pinMode(pin_track_b, INPUT);
 
-  pinMode(pin_lick, INPUT);
+  // pinMode(pin_lick, INPUT);
   pinMode(pin_sol_0, OUTPUT);
   pinMode(pin_sol_1, OUTPUT);
+
+  pinMode(pin_signal, OUTPUT);
 
   pinMode(pin_img_start, OUTPUT);
   pinMode(pin_img_stop, OUTPUT);
@@ -315,13 +321,13 @@ void loop() {
     in_trial = true;
 
     // Determine CS/US parameters
-    if (cs_trial_types[trial_ix]) {
+    if (cs_trial_types[trial_ix] == 0) {
       trial_tone_freq = cs0_freq;
       trial_tone_dur = cs0_dur;
       trial_sol_pin = pin_sol_0;
       trial_sol_dur = us0_dur;
     }
-    else {
+    else if (cs_trial_types[trial_ix] == 1) {
       trial_tone_freq = cs1_freq;
       trial_tone_dur = cs1_dur;
       trial_sol_pin = pin_sol_1;
@@ -368,6 +374,7 @@ void loop() {
         if (response_licks) {
           response_ended = true;
           rewarded = true;
+          ts_us = ts;
           digitalWrite(trial_sol_pin, HIGH);
           behav.SendData(stream, code_us_start, ts, cs_trial_types[trial_ix]);
           behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 1);
@@ -412,10 +419,11 @@ void loop() {
   // -- 3. TRACK LICING -- //
 
   // Get lick state
-  boolean lick_state_now = digitalRead(pin_lick);
-  // int lick_reading = analogRead(pin_lick);
-  // if (lick_reading < LICK_THRESHOLD) boolean lick_state_now = true;
-  // else boolean lick_state_now = false;
+  boolean lick_state_now;
+  // lick_state_now = digitalRead(pin_lick);
+  int lick_reading = analogRead(pin_lick);
+  if (lick_reading < LICK_THRESHOLD) lick_state_now = true;
+  else lick_state_now = false;
 
   // Determine if state changed
   if (lick_state_now != lick_state) {
