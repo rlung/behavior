@@ -1,25 +1,47 @@
 #!/usr/bin/env python
 
-"""
+'''
 Go/no go
 
 Creates GUI to control behavioral and imaging devices for in vivo calcium
 imaging. Script interfaces with Arduino microcontroller and imaging devices.
-"""
+
+Opens serial connection with Arduino that controls hardware and timing. Creates 
+a dedicated thread to scan serial connection for incoming data to save in HDF5 
+file.
+
+Packages needed:
+- pyserial
+
+
+todo:
+figure out why start isn't starting arduino...
+'''
+
+import sys
+is_py2 = sys.version[0] == '2'
 
 import matplotlib
 matplotlib.use('TKAgg')
-import Tkinter as tk
-import tkFont
-import tkMessageBox
-import tkFileDialog
-from ScrolledText import ScrolledText
+if is_py2:
+    import Tkinter as tk
+    import tkFont
+    import tkMessageBox
+    import tkFileDialog
+    from ScrolledText import ScrolledText
+    from Queue import Queue
+else:
+    import tkinter as tk
+    import tkinter.font as tkFont
+    import tkinter.messagebox as tkMessageBox
+    import tkinter.filedialog as tkFileDialog
+    from tkinter.scrolledtext import ScrolledText
+    from queue import Queue
 from PIL import ImageTk
 import collections
 import serial
 import serial.tools.list_ports
 import threading
-from Queue import Queue
 import time
 from datetime import datetime
 from datetime import timedelta
@@ -44,6 +66,9 @@ except KeyError:
     slack = None
 else:
     slack = SlackClient(slack_token)
+
+# Header to print with Arduino outputs
+arduino_head = '  [a]: '
 
 
 class InputManager(tk.Frame):
@@ -208,10 +233,15 @@ class InputManager(tk.Frame):
         self.button_close_port['state'] = 'disabled'
 
         ## frame_debug
+        ## UI for debugging options.
         self.var_verbose = tk.BooleanVar()
+        self.var_print_arduino = tk.BooleanVar()
         self.check_verbose = tk.Checkbutton(frame_debug, variable=self.var_verbose)
+        self.check_print_arduino = tk.Checkbutton(frame_debug, variable=self.var_print_arduino)
         tk.Label(frame_debug, text='Verbose: ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_debug, text='Print Arduino serial: ', anchor='e').grid(row=1, column=0, sticky='e')
         self.check_verbose.grid(row=0, column=1, sticky='w')
+        self.check_print_arduino.grid(row=1, column=1, sticky='w')
 
         ## frame_params
         ## Session parameters
@@ -428,29 +458,30 @@ class InputManager(tk.Frame):
         # Default values
 
         ## Session values
-        ## Example: 3000+3000+3+1+1+3000+3000+60000+500+1000+500+100+0+500+500+1000+0+500+0+100
+        ## Example: 0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
+        self.var_session_type.set(0)
         self.entry_pre_session.insert(0, 5000)
         self.entry_post_session.insert(0, 5000)
         self.entry_cs0_num.insert(0, 3)
         self.entry_cs1_num.insert(0, 1)
         
-        self.var_uniform_iti.set(1)
-        self.entry_mean_iti.insert(0, 3000)
-        self.entry_min_iti.insert(0, 3000)
-        self.entry_max_iti.insert(0, 60000)
-        self.entry_pre_stim.insert(0, 500)
-        self.entry_post_stim.insert(0, 1000)
+        self.var_uniform_iti.set(0)
+        self.entry_mean_iti.insert(0, 60000)
+        self.entry_min_iti.insert(0, 17000)
+        self.entry_max_iti.insert(0, 360000)
+        self.entry_pre_stim.insert(0, 5000)
+        self.entry_post_stim.insert(0, 10000)
         
         self.entry_cs0_dur.insert(0, 500)
-        self.entry_cs0_freq.insert(0, 100)
-        self.entry_us0_delay.insert(0, 0)
+        self.entry_cs0_freq.insert(0, 1000)
+        self.entry_us0_delay.insert(0, 100)
         self.entry_us0_dur.insert(0, 500)
         self.entry_cs1_dur.insert(0, 500)
-        self.entry_cs1_freq.insert(0, 1000)
-        self.entry_us1_delay.insert(0, 0)
+        self.entry_cs1_freq.insert(0, 5000)
+        self.entry_us1_delay.insert(0, 100)
         self.entry_us1_dur.insert(0, 500)
 
-        self.entry_trial_signal_offset.insert(0, 1000)
+        self.entry_trial_signal_offset.insert(0, 500)
         self.entry_trial_signal_dur.insert(0, 100)
         self.entry_trial_signal_freq.insert(0, 0)
         self.entry_grace_dur.insert(0, 2000)
@@ -465,6 +496,8 @@ class InputManager(tk.Frame):
         self.parameters = collections.OrderedDict()
         self.ser = serial.Serial(timeout=1, baudrate=9600)
         self.update_ports()
+        self.q_serial = Queue()
+        self.counter = {}
 
     def gui_util(self, option):
         '''Updates GUI components
@@ -518,7 +551,7 @@ class InputManager(tk.Frame):
             self.entry_serial_status.insert(0, 'Closed')
             self.entry_serial_status['state'] = 'readonly'
 
-    def open_serial(self, delay=3):
+    def open_serial(self, delay=3, timeout=5):
         '''Open serial connection to Arduino
         Executes when 'Open' button is pressed. `delay` sets amount of time (in
         seconds) to wait for the Arduino to be ready after serial is open.
@@ -533,82 +566,96 @@ class InputManager(tk.Frame):
             self.ser.open()
         except serial.SerialException as err:
             # Error during serial.open()
-            err_msg = err.args[0]
+            err_msg = err.args[1]
             tkMessageBox.showerror('Serial error', err_msg)
             print('Serial error: ' + err_msg)
             self.close_serial()
             self.gui_util('close')
+            return
         else:
             # Serial opened successfully
             time.sleep(delay)
             self.gui_util('opened')
             if self.var_verbose.get(): print('Connection to Arduino opened')
 
-        # Send parameters to Arduino
+        # Handle opening message from serial
+        if self.var_print_arduino.get():
+            while self.ser.in_waiting:
+                sys.stdout.write(arduino_head + self.ser.readline())
+        else:
+            self.ser.flushInput()
 
         # Define parameters
         # NOTE: Order is important here since this order is preserved when 
         # sending via serial.
-        self.parameters['session_type'] = self.var_session_type.get()
-        self.parameters['pre_session'] = self.entry_pre_session.get()
-        self.parameters['post_session'] = self.entry_post_session.get()
-        self.parameters['cs0_num'] = self.entry_cs0_num.get()
-        self.parameters['cs1_num'] = self.entry_cs1_num.get()
+        self.parameters = collections.OrderedDict()   # Clear self.parameters (maybe not necessary)
 
-        self.parameters['uniform_iti'] = self.var_uniform_iti.get()
-        self.parameters['mean_iti'] = self.entry_mean_iti.get()
-        self.parameters['min_iti'] = self.entry_min_iti.get()
-        self.parameters['max_iti'] = self.entry_max_iti.get()
-        self.parameters['pre_stim'] = self.entry_pre_stim.get()
-        self.parameters['post_stim'] = self.entry_post_stim.get()
+        self.parameters['session_type'] = int(self.var_session_type.get())
+        self.parameters['pre_session'] = int(self.entry_pre_session.get())
+        self.parameters['post_session'] = int(self.entry_post_session.get())
+        self.parameters['cs0_num'] = int(self.entry_cs0_num.get())
+        self.parameters['cs1_num'] = int(self.entry_cs1_num.get())
 
-        self.parameters['cs0_dur'] = self.entry_cs0_dur.get()
-        self.parameters['cs0_freq'] = self.entry_cs0_freq.get()
-        self.parameters['us0_delay'] = self.entry_us0_delay.get()
-        self.parameters['us0_dur'] = self.entry_us0_dur.get()
-        self.parameters['cs1_dur'] = self.entry_cs1_dur.get()
-        self.parameters['cs1_freq'] = self.entry_cs1_freq.get()
-        self.parameters['us1_delay'] = self.entry_us1_delay.get()
-        self.parameters['us1_dur'] = self.entry_us1_dur.get()
+        self.parameters['uniform_iti'] = int(self.var_uniform_iti.get())
+        self.parameters['mean_iti'] = int(self.entry_mean_iti.get())
+        self.parameters['min_iti'] = int(self.entry_min_iti.get())
+        self.parameters['max_iti'] = int(self.entry_max_iti.get())
+        self.parameters['pre_stim'] = int(self.entry_pre_stim.get())
+        self.parameters['post_stim'] = int(self.entry_post_stim.get())
 
-        self.parameters['trial_signal_offset'] = self.entry_trial_signal_offset.get()
-        self.parameters['trial_signal_dur'] = self.entry_trial_signal_dur.get()
-        self.parameters['trial_signal_freq'] = self.entry_trial_signal_freq.get()
-        self.parameters['grace_dur'] = self.entry_grace_dur.get()
-        self.parameters['response_dur'] = self.entry_response_dur.get()
-        self.parameters['timeout_dur'] = self.entry_timeout_dur.get()
+        self.parameters['cs0_dur'] = int(self.entry_cs0_dur.get())
+        self.parameters['cs0_freq'] = int(self.entry_cs0_freq.get())
+        self.parameters['us0_delay'] = int(self.entry_us0_delay.get())
+        self.parameters['us0_dur'] = int(self.entry_us0_dur.get())
+        self.parameters['cs1_dur'] = int(self.entry_cs1_dur.get())
+        self.parameters['cs1_freq'] = int(self.entry_cs1_freq.get())
+        self.parameters['us1_delay'] = int(self.entry_us1_delay.get())
+        self.parameters['us1_dur'] = int(self.entry_us1_dur.get())
 
-        self.parameters['image_all'] = self.var_image_all.get()
-        self.parameters['image_ttl_dur'] = self.entry_image_ttl_dur.get()
-        self.parameters['track_period'] = self.entry_track_period.get()
+        self.parameters['trial_signal_offset'] = int(self.entry_trial_signal_offset.get())
+        self.parameters['trial_signal_dur'] = int(self.entry_trial_signal_dur.get())
+        self.parameters['trial_signal_freq'] = int(self.entry_trial_signal_freq.get())
+        self.parameters['grace_dur'] = int(self.entry_grace_dur.get())
+        self.parameters['response_dur'] = int(self.entry_response_dur.get())
+        self.parameters['timeout_dur'] = int(self.entry_timeout_dur.get())
 
-        # Cast parameters to int
-        self.parameters = {key: int(val) for key, val in self.parameters.iteritems()}
+        self.parameters['image_all'] = int(self.var_image_all.get())
+        self.parameters['image_ttl_dur'] = int(self.entry_image_ttl_dur.get())
+        self.parameters['track_period'] = int(self.entry_track_period.get())
+        
+        # Send parameters and make sure it's processed
+        values = self.parameters.values()
+        if self.var_verbose.get(): print('Sending parameters: {}'.format(values))
+        self.ser.write('+'.join(str(s) for s in values))
 
-        send_status = send_to_arduino(self.ser, self.parameters, verbose=self.var_verbose.get())
-        if send_status:
-            print('Error sending parameters to Arduino')
-            print(send_status)
-            self.gui_util('close')
-            self.close_serial()
-        else:
-            if self.var_verbose.get():
+        start_time = time.time()
+        while 1:
+            if self.ser.in_waiting:
+                if self.var_print_arduino.get():
+                    # Print incoming data
+                    while self.ser.in_waiting:
+                        sys.stdout.write(arduino_head + self.ser.readline())
                 print('Parameters uploaded to Arduino')
                 print('Ready to start')
+                return
+            elif time.time() >= start_time + timeout:
+                print('Error sending parameters to Arduino')
+                print('Uploading timed out. Start signal not found.')
+                self.gui_util('close')
+                self.close_serial()
+                return
 
 
     def close_serial(self):
-        '''Close serial connection to Arduino
-        Executes when 'Close' button is pressed.
-        '''
+        '''Close serial connection to Arduino on button press'''
+
         self.ser.close()
         self.gui_util('close')
         if self.var_verbose.get(): print('Connection to Arduino closed')
 
     def update_ports(self):
-        '''Updates list of available ports
-        Executes when 'Update' button is pressed.
-        '''
+        '''Updates list of available ports on button press'''
+
         ports_info = list(serial.tools.list_ports.comports())
         ports = [port.device for port in ports_info]
         ports_description = [port.description for port in ports_info]
@@ -623,9 +670,8 @@ class InputManager(tk.Frame):
             self.port_var.set('No ports found')
 
     def get_save_file(self):
-        ''' Opens prompt for file for data to be saved
-        Runs when button beside save file is pressed.
-        '''
+        '''Opens prompt for file for data to be saved on button press'''
+
         save_file = tkFileDialog.asksaveasfilename(
             defaultextension='.h5',
             filetypes=[
@@ -637,12 +683,9 @@ class InputManager(tk.Frame):
         self.entry_file.insert(0, save_file)
 
     def start(self):
-        self.gui_util('start')
+        '''Start session on button press'''
 
-        # Clear Queues
-        # for q in [self.q, self.q_to_thread_rec, self.q_from_thread_rec]:
-        #     with q.mutex:
-        #         q.queue.clear()
+        self.gui_util('start')
 
         # Create data file
         if self.entry_file.get():
@@ -663,6 +706,12 @@ class InputManager(tk.Frame):
             filename = 'data/data-' + now.strftime('%y%m%d-%H%M%S') + '.h5'
             self.data_file = h5py.File(filename, 'x')
 
+        # Create HDF5 file
+        n_trials = self.parameters['cs0_num'] + self.parameters['cs1_num']
+        n_movement_frames = 2 * (n_trials * self.parameters['mean_iti'] + 
+            self.parameters['pre_session'] + self.parameters['post_session']
+            ) / self.parameters['track_period']
+
         # self.grp_cam = self.data_file.create_group('cam')
         # self.dset_ts = self.grp_cam.create_dataset('timestamps', dtype=float,
         #     shape=(int(nframes * 1.1), ), chunks=(1, ))
@@ -675,66 +724,206 @@ class InputManager(tk.Frame):
         # self.grp_cam.attrs['hsub'] = self.var_hsub.get()
 
         self.grp_behav = self.data_file.create_group('behavior')
-        self.grp_behav.create_dataset(name='trials', dtype='uint32',
-            shape=(1000, ), chunks=(1, ))
-        self.grp_behav.create_dataset(name='trial_manual', dtype=bool,
-            shape=(1000, ), chunks=(1, ))
+        self.grp_behav.create_dataset(name='lick', dtype='uint32',
+            shape=(2, n_movement_frames), chunks=(2, 1))
         self.grp_behav.create_dataset(name='movement', dtype='int32',
-            shape=(2, int(nstepframes) * 1.1), chunks=(2, 1))
+            shape=(2, n_movement_frames), chunks=(2, 1))
+        self.grp_behav.create_dataset(name='trial_start', dtype='uint32',
+            shape=(2, n_trials), chunks=(2, 1))
+        self.grp_behav.create_dataset(name='trial_signal', dtype='uint32',
+            shape=(2, n_trials), chunks=(2, 1))
+        self.grp_behav.create_dataset(name='cs', dtype='uint32',
+            shape=(2, n_trials), chunks=(2, 1))
+        self.grp_behav.create_dataset(name='us', dtype='uint32',
+            shape=(2, n_trials), chunks=(2, 1))
+        self.grp_behav.create_dataset(name='response', dtype='uint32',
+            shape=(2, n_trials), chunks=(2, 1))
 
         # Store session parameters into behavior group
         for key, value in self.parameters.iteritems():
-            self.behav_grp.attrs[key] = value
+            self.grp_behav.attrs[key] = value
 
-        self.ser.flushInput()                                   # Remove data from serial input
-        self.ser.write('E')                                     # Start signal for Arduino
+        # if self.print_arduino.get():
+        #     while self.ser.in_waiting:
+        #         sys.stdout.write(arduino_head + self.ser.readline())
+        # else:
+        #     self.ser.flushInput()
+
+        # Setup multithreading for serial scan and recording
+        # for q in [self.q_serial, self.q_to_thread_rec, self.q_from_thread_rec]:
+        for q in [self.q_serial, ]:
+            with q.mutex:
+                q.queue.clear()
+
+        thread_scan = threading.Thread(
+            target=scan_serial,
+            args=(self.q_serial, self.ser, self.var_print_arduino.get())
+        )
+
+        # Reset things
+        self.counter = {
+            'lick': 0, 'movement': 0,
+            'trial_start': 0, 'trial_signal':0, 'cs': 0, 'us': 0,
+            'response': 0
+        }
+
+        # Start session
+        self.ser.write('E')
+        thread_scan.start()
+        print('Session started at {}'.format(datetime.now().time()))
+
+        # Update GUI
+        self.update_session()
+
+    def update_session(self):
+        '''Update with incoming data
+        Checks Queue for incoming data from arduino. Data arrives as comma-
+        separated values with the first element defining the type of data. Data 
+        on GUI is updated, and data is saved to HDF5 file.
+        '''
+        
+        # Rate to update GUI; should be faster than incoming data
+        refresh_rate = 10
+
+        # Codes
+        code_end = 0;
+        code_lick = 1;
+        code_movement = 2;
+        code_trial_start = 3;
+        code_trial_signal = 4;
+        code_cs_start = 5;
+        code_us_start = 6;
+        code_response = 7;
+        code_next_trial = 8;
+        event = {
+            code_lick: 'lick',
+            code_movement: 'movement',
+            code_trial_start: 'trial_start',
+            code_trial_signal: 'trial_signal',
+            code_cs_start: 'cs',
+            code_us_start: 'us',
+            code_response: 'response',
+        }
+
+        # End on "Stop" button (by user)
+        if self.var_stop.get():
+            self.var_stop.set(False)
+            self.ser.write('0')
+            print('User triggered stop, sending signal to Arduino...')
+
+        # Watch incoming queue
+        # Data has format: [code, ts, extra values]
+        if not self.q_serial.empty():
+            code, ts, data = self.q_serial.get()
+
+            if code == code_end:
+                arduino_end = ts
+                # self.q_to_thread_rec.put(0)
+                # while self.q_from_thread_rec.empty():
+                #     pass
+                print('Arduino ended, finalizing data...')
+                self.stop_session(arduino_end=arduino_end)
+                return
+            
+            # Record event
+            if code < 8:
+                self.grp_behav[event[code]][:, self.counter[event[code]]] = [ts, data]
+                self.counter[event[code]] += 1
+
+        self.parent.after(refresh_rate, self.update_session)
+
+    def stop_session(self, arduino_end=None):
+        '''Finalize session
+        Closes hardware connections and saves HDF5 data file. Resets GUI.
+        '''
+
+        end_time = datetime.now().strftime("%H:%M:%S")
+        print('Session ended at {}'.format(end_time))
+        
+        self.gui_util('stop')
+        self.close_serial()
+        # self.cam_close()
+
+        print("Writing behavioral data")
+        self.grp_behav.attrs['end_time'] = end_time
+        self.grp_behav['lick'].resize((2, self.counter['lick']))
+        self.grp_behav['movement'].resize((2, self.counter['movement']))
+        self.grp_behav['trial_start'].resize((2, self.counter['trial_start']))
+        self.grp_behav['trial_signal'].resize((2, self.counter['trial_signal']))
+        self.grp_behav['cs'].resize((2, self.counter['cs']))
+        self.grp_behav['us'].resize((2, self.counter['us']))
+        self.grp_behav['response'].resize((2, self.counter['response']))
+        self.grp_behav.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
+        self.grp_behav.attrs['arduino_end'] = arduino_end
+
+        # self.grp_cam.attrs['end_time'] = end_time
+        # if frame_cutoff:
+        #     print('Trimming recording')
+        #     self.grp_cam['timestamps'].resize((frame_cutoff, ))
+        #     _, dy, dx = self.grp_cam['frames'].shape
+        #     self.grp_cam['frames'].resize((frame_cutoff, dy, dx))
+
+        print('Closing {}'.format(self.data_file.filename))
+        self.data_file.close()
+
+        # Slack that session is done
+        if self.entry_slack.get():
+            slack_msg(self.entry_slack.get(), 'Session ended')
+        print('All done!')
 
 
 def slack_msg(slack_recipient, msg, test=False, verbose=False):
     '''Sends message through Slack
     Creates Slack message `msg` to `slack_recipient` from Bot.
     '''
-    bot_username = 'Go/no go bot'
-    bot_icon = ':squirrel:'
 
-    if test: msg='Test'
-    slack.api_call(
-      'chat.postMessage',
-      username=bot_username,
-      icon_emoji=bot_icon,
-      channel=slack_recipient,
-      text=msg
-    )
+    if not slack:
+        print('No Slack client defined. Check environment variables.')
+    else:
+        bot_username = 'Go/no go bot'
+        bot_icon = ':squirrel:'
+        if test: msg='Test'
+
+        try:
+            slack.api_call(
+              'chat.postMessage',
+              username=bot_username,
+              icon_emoji=bot_icon,
+              channel=slack_recipient,
+              text=msg
+            )
+        except:
+            print('Unable to send Slack message')
 
 
-def send_to_arduino(ser, params, timeout=5, verbose=False):
-    '''Write parameters to Arduino
-    Sends parameters over serial as numbers (integers). Delimited by '+'.
+# def scan_serial(q_serial, q_to_rec_thread, ser, print_arduino=False):
+def scan_serial(q_serial, ser, print_arduino=False):
+    '''Check serial for data
+    Continually check serial connection for data sent from Arduino. Send data 
+    through Queue to communicate with main GUI. Stop when `code_end` is 
+    received from serial.
     '''
 
-    # Handle opening message from serial
-    if verbose:
-        while ser.in_waiting:
-            sys.stdout.write('[a]\t' + ser.readline())
-    else:
-        ser.flushInput()
-    
-    values = params.values()
-    if verbose: print('Sending parameters: {}'.format(values))
-    
-    ser.write('+'.join(str(s) for s in values))
-    start_time = time.time()
+    code_end = 0
 
     while 1:
-        if ser.in_waiting:
-            if verbose:
-                # Print incoming data
-                while ser.in_waiting:
-                    sys.stdout.write('[a]\t' + ser.readline())
-            break
-        elif time.time() >= start_time + timeout:
-            err_msg = 'Uploading timed out. Start signal not found.'
-            return serial.SerialException(err_msg)
+        input_arduino = ser.readline()
+        if not input_arduino: continue
+
+        if print_arduino: sys.stdout.write(arduino_head + input_arduino)
+
+        try:
+            input_split = map(int, input_arduino.split(','))
+        except ValueError:
+            # If not all comma-separated values are int castable
+            pass
+        else:
+            if input_arduino: q_serial.put(input_split)
+            if input_split[0] == code_end:
+                # q_to_rec_thread.put(0)
+                if print_arduino: print("  Scan complete.")
+                return
+
 
 
 
