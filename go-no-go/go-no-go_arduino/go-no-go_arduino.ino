@@ -37,23 +37,9 @@ switch bw classical conditioning and go no go
 #define LICK_THRESHOLD 511      // Threshold to classify lick
 #define IMGPINDUR 100           // Length of imaging signal pulse
 #define CODEEND 48
-#define CODEVACON 49
-#define CODEVACOFF 50
-#define CODEVACTRIGGER 51
-#define CODESOL0ON 52
-#define CODESOL0OFF 53
-#define CODESOL0TRIGGER 54
-#define CODESOL1ON 55
-#define CODESOL1OFF 56
-#define CODESOL1TRIGGER 57
-#define CODESOL2ON 58
-#define CODESOL2OFF 59
-#define CODESOL2TRIGGER 60
-#define CODECS0 61
-#define CODECS1 62
-#define CODECS2 63
-#define CODEPARAMS 68
-#define CODESTART 69
+
+#define STARTCODE 69
+
 #define DELIM ","         // Delimiter used for serial communication
 #define DEBUG 1
 
@@ -404,7 +390,26 @@ void setup() {
 
 void loop() {
   static unsigned long next_track_ts = track_period;  // Timer used for motion tracking and conveyor movement
-  static unsigned int lick_count = 0;
+
+  static unsigned int response_licks;
+  static unsigned long ts_trial_start;
+  static unsigned long ts_trial_signal;
+  static unsigned long ts_stim;
+  static unsigned long ts_response_window;
+  static unsigned long ts_us;
+  static unsigned long ts_timeout;
+  static unsigned long ts_trial_end;
+  static unsigned int trial_ix;
+  static unsigned int trial_tone_freq;    // Defines tone frequency for trial
+  static unsigned int trial_tone_dur;     // Defines tone duration for trial
+  static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
+  static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
+  static boolean in_trial;
+  static boolean signaled;
+  static boolean stimmed;
+  static boolean response_started;
+  // static boolean response_ended;
+  static boolean rewarded;
   static boolean lick_state;
 
   static const unsigned long start = millis();  // record start of session
@@ -412,7 +417,16 @@ void loop() {
 
   // -- 0. SERIAL SCAN -- //
   // Read from computer
-  LookForSignal(0, ts);
+  if (Serial.available() > 0) {
+    // Watch for information from computer.
+    byte reading = Serial.read();
+    switch(reading) {
+      case CODEEND:
+        EndSession(ts);
+        break;
+      break;
+    }
+  }
 
   // -- 1. TRIAL CONTROL -- //
 
@@ -473,7 +487,7 @@ void loop() {
       else {
         // Deliver reward
         if (response_licks) {
-          response_ended = true;
+          // response_ended = true;
           rewarded = true;
           ts_us = ts;
           digitalWrite(trial_sol_pin, HIGH);
@@ -482,8 +496,8 @@ void loop() {
         }
       }
     }
-    if (! response_ended && ts >= ts_timeout) {
-      response_ended = true;
+    if (! response_licks && ts >= ts_timeout) {
+      // response_ended = true;
       behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 0);
     }
     if (ts >= ts_trial_end) {
@@ -497,7 +511,7 @@ void loop() {
       signaled = false;
       stimmed = false;
       response_started = false;
-      response_ended = false;
+      // response_ended = false;
       rewarded = false;
       trial_ix++;
       if (! image_all) digitalWrite(pin_img_stop, HIGH);
