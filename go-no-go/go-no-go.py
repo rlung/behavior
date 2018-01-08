@@ -612,12 +612,13 @@ class InputManager(tk.Frame):
         self.parameters['us1_delay'] = int(self.entry_us1_delay.get())
         self.parameters['us1_dur'] = int(self.entry_us1_dur.get())
 
-        self.parameters['trial_signal_offset'] = int(self.entry_trial_signal_offset.get())
-        self.parameters['trial_signal_dur'] = int(self.entry_trial_signal_dur.get())
-        self.parameters['trial_signal_freq'] = int(self.entry_trial_signal_freq.get())
-        self.parameters['grace_dur'] = int(self.entry_grace_dur.get())
-        self.parameters['response_dur'] = int(self.entry_response_dur.get())
-        self.parameters['timeout_dur'] = int(self.entry_timeout_dur.get())
+        if self.var_session_type.get():
+            self.parameters['trial_signal_offset'] = int(self.entry_trial_signal_offset.get())
+            self.parameters['trial_signal_dur'] = int(self.entry_trial_signal_dur.get())
+            self.parameters['trial_signal_freq'] = int(self.entry_trial_signal_freq.get())
+            self.parameters['grace_dur'] = int(self.entry_grace_dur.get())
+            self.parameters['response_dur'] = int(self.entry_response_dur.get())
+            self.parameters['timeout_dur'] = int(self.entry_timeout_dur.get())
 
         self.parameters['image_all'] = int(self.var_image_all.get())
         self.parameters['image_ttl_dur'] = int(self.entry_image_ttl_dur.get())
