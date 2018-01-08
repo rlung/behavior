@@ -12,10 +12,7 @@ file.
 
 Packages needed:
 - pyserial
-
-
-todo:
-figure out why start isn't starting arduino...
+- slackclient
 '''
 
 import sys
