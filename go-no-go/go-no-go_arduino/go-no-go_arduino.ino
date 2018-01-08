@@ -81,7 +81,7 @@ unsigned long post_session;
 unsigned long session_dur;
 int cs0_num;
 int cs1_num;
-int cs2_num;
+
 boolean iti_distro;
 unsigned long mean_iti;
 unsigned long min_iti;
@@ -275,47 +275,54 @@ void GetParams() {
   session_type = parameters[0];
   pre_session = parameters[1];
   post_session = parameters[2];
-  session_dur = parameters[3];
-  cs0_num = parameters[4];
-  cs1_num = parameters[5];
-  cs2_num = parameters[6];
-  iti_distro = parameters[7];
-  mean_iti = parameters[8];
-  min_iti = parameters[9];
-  max_iti = parameters[10];
-  pre_stim = parameters[11];
-  post_stim = parameters[12];
-  cs0_dur = parameters[13];
-  cs0_freq = parameters[14];
-  cs0_pulse_dur = parameters[15];
-  us0_dur = parameters[16];
-  us0_delay = parameters[17];
-  cs1_dur = parameters[18];
-  cs1_freq = parameters[19];
-  cs1_pulse_dur = parameters[20];
-  us1_dur = parameters[21];
-  us1_delay = parameters[22];
-  cs2_dur = parameters[23];
-  cs2_freq = parameters[24];
-  cs2_pulse_dur = parameters[25];
-  us2_dur = parameters[26];
-  us2_delay = parameters[27];
-  consumption_dur = parameters[28];
-  vac_dur = parameters[29];
-  trial_signal_offset = parameters[30];
-  trial_signal_dur = parameters[31];
-  trial_signal_freq = parameters[32];
-  grace_dur = parameters[33];
-  response_dur = parameters[34];
-  timeout_dur = parameters[35];
-  image_all = parameters[36];
-  image_ttl_dur = parameters[37];
-  track_period = parameters[38];
 
-  if (session_type == 0) {
-    trial_num = cs0_num + cs1_num + cs2_num;
-  } else if (session_type == 1) {
-    trial_num = cs0_num + cs1_num;
+  cs0_num = parameters[3];
+  cs1_num = parameters[4];
+
+  iti_distro = parameters[5];
+  mean_iti = parameters[6];
+  min_iti = parameters[7];
+  max_iti = parameters[8];
+  pre_stim = parameters[9];
+  post_stim = parameters[10];
+
+  cs0_dur = parameters[11];
+  cs0_freq = parameters[12];
+  us0_delay = parameters[13];
+  us0_dur = parameters[14];
+  cs1_dur = parameters[15];
+  cs1_freq = parameters[16];
+  us1_delay = parameters[17];
+  us1_dur = parameters[18];
+
+  trial_signal_offset = parameters[19];
+  trial_signal_dur = parameters[20];
+  trial_signal_freq = parameters[21];
+  grace_dur = parameters[22];
+  response_dur = parameters[23];
+  timeout_dur = parameters[24];
+
+  image_all = parameters[25];
+  image_ttl_dur = parameters[26];
+  track_period = parameters[27];
+
+  us_delay = us0_delay;
+  trial_num = cs0_num + cs1_num;
+  trial_dur = pre_stim + post_stim;
+}
+
+
+void WaitForStart() {
+  byte reading;
+
+  while (1) {
+    reading = Serial.read();
+    switch(reading) {
+      case CODEEND:
+        EndSession(0);
+      case STARTCODE:
+        return;   // Start session
+    }
   }
   trial_dur = pre_stim + post_stim;
 }
@@ -347,19 +354,19 @@ void setup() {
   GetParams();
   Serial.println("Parameters processed");
 
-  if (session_type == code_classical_conditioning || session_type == code_go_nogo) {
-    // First trial
-    switch (iti_distro) {
-      case 0:
-        next_trial_ts = pre_session + mean_iti;
-        break;
-      case 1:
-        next_trial_ts = pre_session + behav.UniDistro(min_iti, max_iti);
-        break;
-      case 2:
-        next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
-        break;
-    }
+  // First trial
+  switch (iti_distro) {
+    case 0:
+      next_trial_ts = pre_session + mean_iti;
+      break;
+    case 1:
+      next_trial_ts = pre_session + behav.UniDistro(min_iti, max_iti);
+      break;
+    case 2:
+      next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
+      break;
+    break;
+  }
 
     // Shuffle trials
     cs_trial_types = new () int[trial_num];
@@ -389,10 +396,9 @@ void setup() {
 
 
 void loop() {
-  static unsigned long img_start_ts;      // Timestamp pin was last on
-  static unsigned long img_stop_ts;
   static unsigned long next_track_ts = track_period;  // Timer used for motion tracking and conveyor movement
-  static unsigned long lick_count = 0;
+  static unsigned int lick_count = 0;
+  static boolean lick_state;
 
   static const unsigned long start = millis();  // record start of session
   unsigned long ts = millis() - start;          // current timestamp
@@ -413,10 +419,10 @@ void loop() {
   // -- 1. TRIAL CONTROL -- //
   switch (session_type) {
     case 0:
-      ClassicalConditioning();
+      ClassicalConditioning(ts, lick_count);
       break;
     case 1:
-      GoNogo();
+      GoNogo(ts, lick_count);
       break;
     break;
   }
