@@ -74,7 +74,7 @@ unsigned long post_session;
 int cs0_num;
 int cs1_num;
 
-boolean uniform_iti;
+boolean iti_distro;
 unsigned long mean_iti;
 unsigned long min_iti;
 unsigned long max_iti;
@@ -150,7 +150,7 @@ void GetParams() {
   cs0_num = parameters[3];
   cs1_num = parameters[4];
 
-  uniform_iti = parameters[5];
+  iti_distro = parameters[5];
   mean_iti = parameters[6];
   min_iti = parameters[7];
   max_iti = parameters[8];
@@ -225,13 +225,17 @@ void setup() {
   Serial.println("Parameters processed");
 
   // First trial
-  if (uniform_iti) {
-    next_trial_ts = pre_session + mean_iti;
-  }
-  else {
-    // Create ITIs from an exponential distribution
-    if (min_iti < trial_dur) min_iti = trial_dur;   // Make sure min_iti is valid
-    next_trial_ts = (unsigned long) pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);  // Casting unnecessary?
+  switch (iti_distro) {
+    case 0:
+      next_trial_ts = pre_session + mean_iti;
+      break;
+    case 1:
+      next_trial_ts = pre_session + behav.UniDistro(min_iti, max_iti);
+      break;
+    case 2:
+      next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
+      break;
+    break;
   }
 
   // Shuffle trials
@@ -258,10 +262,9 @@ void setup() {
 
 
 void loop() {
-  static unsigned long img_start_ts;      // Timestamp pin was last on
-  static unsigned long img_stop_ts;
   static unsigned long next_track_ts = track_period;  // Timer used for motion tracking and conveyor movement
-  static unsigned long lick_count = 0;
+  static unsigned int lick_count = 0;
+  static boolean lick_state;
 
   static const unsigned long start = millis();  // record start of session
   unsigned long ts = millis() - start;          // current timestamp
@@ -282,10 +285,10 @@ void loop() {
   // -- 1. TRIAL CONTROL -- //
   switch (session_type) {
     case 0:
-      ClassicalConditioning();
+      ClassicalConditioning(ts, lick_count);
       break;
     case 1:
-      GoNogo();
+      GoNogo(ts, lick_count);
       break;
     break;
   }
