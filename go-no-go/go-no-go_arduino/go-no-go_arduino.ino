@@ -16,6 +16,11 @@ Parameters for session are received via serial connection from Python GUI.  Data
 from hardware is routed directly back via serial connection to Python GUI for 
 recording and calculations.
 
+Outputs are coded as [type of information, timestamp, data]. Many of the trial 
+data has `data` encoded as the CS type. Response is coded with CS type and lick 
+or not (CS is second bit, lick is first bit, eg, 3 is CS 1, lick; 2 is CS 1 no 
+lick).
+
 Example inputs:
 0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
 0+3000+3000+3+1 + 0+45000+3000+120000+1000+1000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
