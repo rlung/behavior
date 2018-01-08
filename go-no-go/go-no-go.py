@@ -249,8 +249,8 @@ class InputManager(tk.Frame):
         ### frame_session_type
         ### UI for choosing session type, ie, classical conditining vs go/no go.
         self.var_session_type = tk.IntVar()
-        self.radio_conditioning = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=0)
-        self.radio_gonogo = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=1)
+        self.radio_conditioning = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=0, command=lambda: self.gui_util('pavlov'))
+        self.radio_gonogo = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=1, command=lambda: self.gui_util('gonogo'))
         tk.Label(frame_session_type, text='Classical conditioning: ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_session_type, text='Go/no go: ', anchor='e').grid(row=1, column=0, sticky='e')
         self.radio_conditioning.grid(row=0, column=1, sticky='w')
@@ -273,25 +273,31 @@ class InputManager(tk.Frame):
 
         ### frame_trial
         ### UI for trial.
-        self.var_uniform_iti = tk.BooleanVar()
+        self.var_iti_distro = tk.IntVar()
+        self.radio_fixed_iti = tk.Radiobutton(frame_trial, variable=self.var_iti_distro, value=0, command=lambda: self.gui_util('fixed'))
+        self.radio_uniform_iti = tk.Radiobutton(frame_trial, variable=self.var_iti_distro, value=1, command=lambda: self.gui_util('not_fixed'))
+        self.radio_expo_iti = tk.Radiobutton(frame_trial, variable=self.var_iti_distro, value=2, command=lambda: self.gui_util('not_fixed'))
         self.entry_mean_iti = tk.Entry(frame_trial, width=entry_width)
         self.entry_min_iti = tk.Entry(frame_trial, width=entry_width)
         self.entry_max_iti = tk.Entry(frame_trial, width=entry_width)
         self.entry_pre_stim = tk.Entry(frame_trial, width=entry_width)
         self.entry_post_stim = tk.Entry(frame_trial, width=entry_width)
-        self.check_uniform_iti = tk.Checkbutton(frame_trial, variable=self.var_uniform_iti)
-        tk.Label(frame_trial, text='Uniform ITI: ', anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_trial, text='Mean ITI (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_trial, text='Min ITI (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
-        tk.Label(frame_trial, text='Max ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
-        tk.Label(frame_trial, text='Prestim time (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
-        tk.Label(frame_trial, text='Poststim time (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
-        self.check_uniform_iti.grid(row=0, column=1, sticky='w')
-        self.entry_mean_iti.grid(row=1, column=1, sticky='w')
-        self.entry_min_iti.grid(row=2, column=1, sticky='w')
-        self.entry_max_iti.grid(row=3, column=1, sticky='w')
-        self.entry_pre_stim.grid(row=4, column=1, sticky='w')
-        self.entry_post_stim.grid(row=5, column=1, sticky='w')
+        tk.Label(frame_trial, text='Fixed ITI: ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_trial, text='Uniform distro: ', anchor='e').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_trial, text='Exponential distro: ', anchor='e').grid(row=2, column=0, sticky='e')
+        tk.Label(frame_trial, text='Mean ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
+        tk.Label(frame_trial, text='Min ITI (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
+        tk.Label(frame_trial, text='Max ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
+        tk.Label(frame_trial, text='Prestim time (ms): ', anchor='e').grid(row=6, column=0, sticky='e')
+        tk.Label(frame_trial, text='Poststim time (ms): ', anchor='e').grid(row=7, column=0, sticky='e')
+        self.radio_fixed_iti.grid(row=0, column=1, sticky='w')
+        self.radio_uniform_iti.grid(row=1, column=1, sticky='w')
+        self.radio_expo_iti.grid(row=2, column=1, sticky='w')
+        self.entry_mean_iti.grid(row=3, column=1, sticky='w')
+        self.entry_min_iti.grid(row=4, column=1, sticky='w')
+        self.entry_max_iti.grid(row=5, column=1, sticky='w')
+        self.entry_pre_stim.grid(row=6, column=1, sticky='w')
+        self.entry_post_stim.grid(row=7, column=1, sticky='w')
 
         ### frame_csus0
         ### UI for CS-US 0.
@@ -402,6 +408,22 @@ class InputManager(tk.Frame):
         self.button_stop['state'] = 'disabled'
 
         ## Group GUI objects
+        self.obj_not_fixed_iti = [
+            self.entry_min_iti,
+            self.entry_max_iti,
+        ]
+        self.obj_pavlov = [
+            self.entry_us0_delay,
+            self.entry_us1_delay,
+        ]
+        self.obj_gonogo = [
+            self.entry_trial_signal_offset,
+            self.entry_trial_signal_dur,
+            self.entry_trial_signal_freq,
+            self.entry_grace_dur,
+            self.entry_response_dur,
+            self.entry_timeout_dur,
+        ]
         self.obj_to_disable_at_open = [
             self.option_ports,
             self.button_open_port,
@@ -412,7 +434,9 @@ class InputManager(tk.Frame):
             self.entry_post_session,
             self.entry_cs0_num,
             self.entry_cs1_num,
-            self.check_uniform_iti,
+            self.radio_fixed_iti,
+            self.radio_uniform_iti,
+            self.radio_expo_iti,
             self.entry_mean_iti,
             self.entry_min_iti,
             self.entry_max_iti,
@@ -465,28 +489,28 @@ class InputManager(tk.Frame):
         self.entry_cs0_num.insert(0, 3)
         self.entry_cs1_num.insert(0, 1)
         
-        self.var_uniform_iti.set(0)
+        self.var_iti_distro.set(0)
         self.entry_mean_iti.insert(0, 60000)
         self.entry_min_iti.insert(0, 17000)
         self.entry_max_iti.insert(0, 360000)
-        self.entry_pre_stim.insert(0, 5000)
-        self.entry_post_stim.insert(0, 10000)
+        self.entry_pre_stim.insert(0, 7000)
+        self.entry_post_stim.insert(0, 13000)
         
-        self.entry_cs0_dur.insert(0, 500)
+        self.entry_cs0_dur.insert(0, 2000)
         self.entry_cs0_freq.insert(0, 1000)
-        self.entry_us0_delay.insert(0, 100)
-        self.entry_us0_dur.insert(0, 500)
-        self.entry_cs1_dur.insert(0, 500)
+        self.entry_us0_delay.insert(0, 3000)
+        self.entry_us0_dur.insert(0, 50)
+        self.entry_cs1_dur.insert(0, 2000)
         self.entry_cs1_freq.insert(0, 5000)
-        self.entry_us1_delay.insert(0, 100)
-        self.entry_us1_dur.insert(0, 500)
+        self.entry_us1_delay.insert(0, 3000)
+        self.entry_us1_dur.insert(0, 50)
 
-        self.entry_trial_signal_offset.insert(0, 1000)
-        self.entry_trial_signal_dur.insert(0, 200)
+        self.entry_trial_signal_offset.insert(0, 0)
+        self.entry_trial_signal_dur.insert(0, 0)
         self.entry_trial_signal_freq.insert(0, 0)
         self.entry_grace_dur.insert(0, 2000)
         self.entry_response_dur.insert(0, 2000)
-        self.entry_timeout_dur.insert(0, 8000)
+        self.entry_timeout_dur.insert(0, 0)
 
         self.var_image_all.set(0)
         self.entry_image_ttl_dur.insert(0, 100)
@@ -504,7 +528,23 @@ class InputManager(tk.Frame):
         Enable and disable components based on events to prevent bad stuff.
         '''
 
-        if option == 'open':
+        if option == 'fixed':
+            for obj in self.obj_not_fixed_iti:
+                obj['state'] = 'disabled'
+        if option == 'not_fixed':
+            for obj in self.obj_not_fixed_iti:
+                obj['state'] = 'normal'
+        elif option == 'pavlov':
+            for obj in self.obj_gonogo:
+                obj['state'] = 'disabled'
+            for obj in self.obj_pavlov:
+                obj['state'] = 'normal'
+        elif option == 'gonogo':
+            for obj in self.obj_pavlov:
+                obj['state'] = 'disabled'
+            for obj in self.obj_gonogo:
+                obj['state'] = 'normal'
+        elif option == 'open':
             for i, obj in enumerate(self.obj_to_disable_at_open):
                 # Determine current state of object                
                 self.obj_enabled_at_open[i] = False if obj['state'] == 'disabled' else True
@@ -596,7 +636,7 @@ class InputManager(tk.Frame):
         self.parameters['cs0_num'] = int(self.entry_cs0_num.get())
         self.parameters['cs1_num'] = int(self.entry_cs1_num.get())
 
-        self.parameters['uniform_iti'] = int(self.var_uniform_iti.get())
+        self.parameters['iti_distro'] = int(self.var_iti_distro.get())
         self.parameters['mean_iti'] = int(self.entry_mean_iti.get())
         self.parameters['min_iti'] = int(self.entry_min_iti.get())
         self.parameters['max_iti'] = int(self.entry_max_iti.get())
@@ -923,229 +963,6 @@ def scan_serial(q_serial, ser, print_arduino=False):
                 # q_to_rec_thread.put(0)
                 if print_arduino: print("  Scan complete.")
                 return
-
-
-
-
-        ## Camera parameters
-        # self.var_fps.set(10)
-        # self.var_vsub.set(50)
-        # self.var_hsub.set(50)
-        # self.var_gain.set(15)
-        # self.var_expo.set(40)
-
-        ## GUI components
-        # self.button_close_port['state'] = 'disabled'
-        # self.button_start['state'] = 'disabled'
-        # self.button_stop['state'] = 'disabled'
-        
-        # # Options frame
-        # opt_session_frame = tk.Frame(frame_setup)
-        # opt_session_frame.grid(row=0, column=0)
-'''
-        # Hardware parameters
-        hardware_frame = tk.Frame(frame_setup)
-        hardware_frame.grid(row=0, column=1)
-        hardware_frame.grid_columnconfigure(0, weight=1)
-
-        ## UI for camera
-        self.frame_cam = tk.LabelFrame(hardware_frame, text="Camera")
-        self.frame_cam.grid(row=0, column=0, padx=px, pady=py, sticky='we')
-
-        self.var_preview = tk.BooleanVar()
-        self.var_fps = tk.DoubleVar()
-        self.var_vsub = tk.IntVar()
-        self.var_hsub = tk.IntVar()
-        self.var_gain = tk.IntVar()
-        self.var_expo = tk.IntVar()
-        self.var_instr = tk.StringVar()
-
-        self.option_instr = tk.OptionMenu(self.frame_cam,
-            self.var_instr, [])
-        self.option_instr.configure(anchor=tk.W)
-        self.button_refresh_instr = tk.Button(self.frame_cam,
-            text="Update", command=self.update_instruments)
-        self.button_preview = tk.Button(self.frame_cam,
-            text="Preview", command=self.cam_preview)
-        self.button_settings = tk.Button(self.frame_cam,
-            text="Settings", command=self.cam_settings)
-
-        self.option_instr.grid(row=1, column=0, columnspan=3, padx=px1, pady=py1, sticky='we')
-        self.button_refresh_instr.grid(row=2, column=0, padx=px1, pady=py1, sticky='we')
-        self.button_preview.grid(row=2, column=1, padx=px1, pady=py1, sticky='we')
-        self.button_settings.grid(row=2, column=2, padx=px1, pady=py1, sticky='we')
-        self.instrument_panels = [
-            self.option_instr,
-            self.button_refresh_instr,
-        ]
-
-        ## UI for debug options
-        debug_frame = tk.LabelFrame(hardware_frame, text="Debugging")
-        debug_frame.grid(row=2, column=0, padx=px, pady=py, sticky='we')
-        
-        self.print_var = tk.BooleanVar()
-        self.var_sim_cam = tk.BooleanVar()
-        self.var_sim_arduino = tk.BooleanVar()
-
-        self.check_print = tk.Checkbutton(debug_frame, text=" Print Arduino output", variable=self.print_var)
-        self.check_sim_cam = tk.Checkbutton(debug_frame, text=" Simulate camera", variable=self.var_sim_cam)
-        self.check_sim_arduino = tk.Checkbutton(debug_frame, text=" Simulate Arduino", variable=self.var_sim_arduino)
-        self.pdb = tk.Button(debug_frame, text="pdb", command=pdb.set_trace)
-
-        self.check_print.grid(row=0, column=0, padx=px1, sticky='w')
-        self.check_sim_cam.grid(row=1, column=0, padx=px1, sticky='w')
-        self.check_sim_arduino.grid(row=2, column=0, padx=px1, sticky='w')
-        self.pdb.grid(row=3, column=0, padx=px1, sticky='w')
-
-        # Frame for file
-        frame_file = tk.Frame(frame_setup)
-        frame_file.grid(row=0, column=2, padx=5, pady=5, sticky='wens')
-        frame_file.columnconfigure(0, weight=1)
-
-        ## Notes
-        frame_notes = tk.Frame(frame_file)
-        frame_notes.grid(row=0, sticky='wens', padx=px, pady=py)
-        frame_notes.grid_columnconfigure(0, weight=1)
-
-        tk.Label(frame_notes, text="Notes:").grid(row=0, column=0, sticky='w')
-        self.scrolled_notes = ScrolledText(frame_notes, width=20, height=15)
-
-        self.scrolled_notes.grid(row=1, column=0, sticky='wens')
-
-        
-
-        ## Start frame
-        start_frame = tk.Frame(frame_file)
-        start_frame.grid(row=2, column=0, columnspan=2, padx=px, pady=py, sticky='we')
-        start_frame.columnconfigure(0, weight=1)
-        start_frame.columnconfigure(1, weight=1)
-        start_frame.columnconfigure(2, weight=1)
-        start_frame.columnconfigure(3, weight=1)
-
-        self.stop = tk.BooleanVar()
-        self.stop.set(False)
-
-        tk.Label(start_frame, text="File to save data:", anchor=tk.W).grid(row=0, column=0, columnspan=4, sticky=tk.W)
-        self.entry_save = tk.Entry(start_frame)
-        self.button_save_file = tk.Button(start_frame, text="...", command=self.get_save_file)
-        self.button_start = tk.Button(start_frame, text="Start", command=lambda: self.parent.after(0, self.start))
-        self.button_stop = tk.Button(start_frame, text="Stop", command=lambda: self.stop.set(True))
-
-        self.entry_save.grid(row=1, column=0, columnspan=3, sticky='wens')
-        self.button_save_file.grid(row=1, column=4, sticky='e')
-        self.button_start.grid(row=2, column=0, sticky='w')
-        self.button_stop.grid(row=2, column=1, sticky='w')
-
-        ###########################
-        ###### MONITOR FRAME ######
-        ###########################
-        monitor_frame = tk.Frame(parent, bg='white')
-        monitor_frame.grid(row=1, column=0, sticky=tk.W+tk.E+tk.N+tk.S)
-        monitor_frame.columnconfigure(0, weight=4)
-
-        ##### PLOTS #####
-        self.num_rail_segments = 10  # Number of segments to split rail--for plotting
-        trial_window = 30000
-
-        sns.set_style('dark')
-        self.color_vel = 'darkslategray'
-
-        # self.fig, self.ax = plt.subplots(figsize=(8, 2))
-        self.fig = Figure(figsize=(8, 2))
-        self.ax = self.fig.add_subplot(1, 1, 1)
-        self.ax.set_xlabel("Trial time (ms)")
-        self.ax.set_ylabel("Relative velocity")
-        self.ax.set_xlim(0, history)
-        self.ax.set_ylim(-50, 50)
-        self.vel_trace, = self.ax.plot([], [], c=self.color_vel)
-        self.ax.axhline(y=0, linestyle='--', linewidth=1, color='0.5')
-
-        self.plot_canvas = FigureCanvasTkAgg(self.fig, monitor_frame)
-        self.fig.tight_layout()
-        self.plot_canvas.show()
-        self.plot_canvas.draw()
-        self.plot_canvas.get_tk_widget().grid(row=0, column=0, rowspan=2, sticky=tk.W+tk.E+tk.N+tk.S)
-
-        ##### SCOREBOARD #####
-        scoreboard_frame = tk.Frame(monitor_frame, bg='white')
-        scoreboard_frame.grid(row=0, column=1, padx=20, sticky=tk.N)
-
-        self.manual = tk.BooleanVar()
-        self.entry_start = tk.Entry(scoreboard_frame, width=entry_width)
-        self.entry_end = tk.Entry(scoreboard_frame, width=entry_width)
-        self.button_manual = tk.Button(scoreboard_frame, command=lambda: self.manual.set(True))
-        tk.Label(scoreboard_frame, text="Session start:", bg='white', anchor=tk.W).grid(row=0, sticky=tk.W)
-        tk.Label(scoreboard_frame, text="Session end:", bg='white', anchor=tk.W).grid(row=2, sticky=tk.W)
-        self.entry_start.grid(row=1, sticky=tk.W)
-        self.entry_end.grid(row=3, sticky=tk.W)
-        self.button_manual.grid(row=4, sticky=tk.W+tk.E)
-
-        self.scoreboard_objs = [
-            self.entry_start,
-            self.entry_end
-        ]
-        
-        ###### GUI OBJECTS ORGANIZED BY TIME ACTIVE ######
-        # List of components to disable at open
-        self.obj_to_disable_at_open = [
-            self.option_ports,
-            self.button_update_ports,
-            self.button_open_port,
-            self.entry_session_dur,
-            self.entry_trial_dur,
-            self.entry_track_period,
-            self.entry_track_steps,
-            self.check_print
-        ]
-        # Boolean of objects in list above that should be enabled when time...
-        self.obj_enabled_at_open = [False] * len(self.obj_to_disable_at_open)
-        
-        self.obj_to_enable_at_open = [
-            self.button_close_port,
-            self.button_start
-        ]
-        self.obj_to_disable_at_start = [
-            self.button_close_port,
-            self.entry_save,
-            self.button_save_file,
-            self.button_start,
-            self.button_slack
-        ]
-        self.obj_to_enable_at_start = [
-            self.button_stop
-        ]
-
-        # Update
-        self.update_ports()
-        self.update_instruments()
-
-        ###### SESSION VARIABLES ######
-        self.cam = None
-        self.scale_fps = None
-        self.parameters = collections.OrderedDict()
-        self.ser = serial.Serial(timeout=1, baudrate=9600)
-        self.start_time = ""
-        self.counter = {}
-        self.q = Queue()
-        self.q_to_thread_rec = Queue()
-        self.q_from_thread_rec = Queue()
-        self.gui_update_ct = 0  # count number of times GUI has been updated
-
-    def update_instruments(self):
-        self.instrs = {}
-        instrs = list_instruments()
-        menu = self.option_instr['menu']
-        menu.delete(0, tk.END)
-        if instrs:
-            for instr in instrs:
-                menu.add_command(label=instr.name, command=lambda x=instr.name: self.var_instr.set(x))
-                self.instrs[instr.name] = instr
-            self.var_instr.set(instrs[0].name)
-        else:
-            self.var_instr.set("No instruments found")
-            self.instrs = {}
-
-            '''
 
 
 def main():

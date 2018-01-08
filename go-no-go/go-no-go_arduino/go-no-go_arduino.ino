@@ -32,7 +32,6 @@ switch bw classical conditioning and go no go
 #define IMGPINDUR 100     // Length of imaging signal pulse
 #define CODEEND 48
 #define STARTCODE 69
-#define CODETRIAL 70
 #define DELIM ","         // Delimiter used for serial communication
 #define DEBUG 1
 
@@ -277,7 +276,7 @@ void loop() {
   static boolean signaled;
   static boolean stimmed;
   static boolean response_started;
-  static boolean response_ended;
+  // static boolean response_ended;
   static boolean rewarded;
   static boolean lick_state;
   static boolean reward_signal;           // Indicates if criterion for reward met (eg, lick on Go)
@@ -302,12 +301,6 @@ void loop() {
     switch(reading) {
       case CODEEND:
         EndSession(ts);
-        break;
-      case CODETRIAL:
-        // Only works if not already in trial
-        if (! in_trial) {
-          in_trial = true;
-        }
         break;
       break;
     }
@@ -372,7 +365,7 @@ void loop() {
       else {
         // Deliver reward
         if (response_licks) {
-          response_ended = true;
+          // response_ended = true;
           rewarded = true;
           ts_us = ts;
           digitalWrite(trial_sol_pin, HIGH);
@@ -381,8 +374,8 @@ void loop() {
         }
       }
     }
-    if (! response_ended && ts >= ts_timeout) {
-      response_ended = true;
+    if (! response_licks && ts >= ts_timeout) {
+      // response_ended = true;
       behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 0);
     }
     if (ts >= ts_trial_end) {
@@ -396,7 +389,7 @@ void loop() {
       signaled = false;
       stimmed = false;
       response_started = false;
-      response_ended = false;
+      // response_ended = false;
       rewarded = false;
       trial_ix++;
       if (! image_all) digitalWrite(pin_img_stop, HIGH);
