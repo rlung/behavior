@@ -1,4 +1,7 @@
-void ClassicalConditioning() {
+void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
+  static unsigned long img_start_ts;      // Timestamp pin was last on
+  static unsigned long img_stop_ts;
+
   static unsigned long ts_trial_start;
   static unsigned long ts_stim;
   static unsigned long ts_us;
@@ -11,7 +14,6 @@ void ClassicalConditioning() {
   static boolean in_trial;
   static boolean stimmed;
   static boolean rewarded;
-  static boolean lick_state;
 
 
   // Turn off events
@@ -25,7 +27,7 @@ void ClassicalConditioning() {
     in_trial = true;
 
     // Determine CS/US parameters
-    if (cs0_trials[trial_ix]) {
+    if (cs_trial_types[trial_ix]) {
       trial_tone_freq = cs0_freq;
       trial_tone_dur = cs0_dur;
       trial_sol_pin = pin_sol_0;
@@ -47,11 +49,7 @@ void ClassicalConditioning() {
     // Start imaging (if applicable)
     if (! image_all) digitalWrite(pin_img_start, HIGH);
 
-    // Determine next trial
-    if (uniform_iti) next_trial_ts += mean_iti;
-    else next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
-
-    behav.SendData(stream, code_trial_start, ts, cs0_trials[trial_ix]);
+    behav.SendData(stream, code_trial_start, ts, cs_trial_types[trial_ix]);
   }
   else if (trial_ix >= trial_num && ! in_trial && ts >= ts_trial_start + post_session) {
     EndSession(ts);
@@ -62,16 +60,29 @@ void ClassicalConditioning() {
     if (! stimmed && ts >= ts_stim) {
       // Present CS
       stimmed = true;
-      Tone(pin_tone, trial_tone_freq, trial_tone_dur);
-      behav.SendData(stream, code_cs_start, ts, cs0_trials[trial_ix]);
+      tone(pin_tone, trial_tone_freq, trial_tone_dur);
+      behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
     }
     if (! rewarded && ts >= ts_us) {
       // Deliver reward
       rewarded = true;
       digitalWrite(trial_sol_pin, HIGH);
-      behav.SendData(stream, code_us_start, ts, cs0_trials[trial_ix]);
+      behav.SendData(stream, code_us_start, ts, cs_trial_types[trial_ix]);
     }
     if (ts >= ts_trial_end) {
+      switch (iti_distro) {
+        case 0:
+          next_trial_ts += mean_iti;
+          break;
+        case 1:
+          next_trial_ts += behav.UniDistro(min_iti, max_iti);
+          break;
+        case 2:
+          next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
+          break;
+        break;
+      }
+      behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[trial_ix + 1]);  // Still need to correct for last trial
       // End trial
       in_trial = false;
       stimmed = false;
@@ -83,10 +94,9 @@ void ClassicalConditioning() {
 }
 
 
-void GoNogo() {
+void GoNogo(unsigned long ts, unsigned int lick_count) {
   static unsigned long img_start_ts;      // Timestamp pin was last on
   static unsigned long img_stop_ts;
-  static unsigned long next_track_ts = track_period;  // Timer used for motion tracking and conveyor movement
 
   static unsigned long ts_trial_start;
   static unsigned long ts_trial_signal;
@@ -104,9 +114,8 @@ void GoNogo() {
   static boolean signaled;
   static boolean stimmed;
   static boolean response_started;
-  // static boolean response_ended;
-  static boolean rewarded;
-  static boolean lick_state;
+  static unsigned int response_licks_base;
+  static boolean responded;
 
 
   // Turn off events
@@ -153,7 +162,7 @@ void GoNogo() {
 
   // Control trial events (when in trial)
   if (in_trial) {
-    if (! signaled && ts >= ts_trial_signal) {
+    if (trial_signal_dur > 0 && ! signaled && ts >= ts_trial_signal) {
       signaled = true;
       digitalWrite(pin_signal, HIGH);
       behav.SendData(stream, code_trial_signal, ts, cs_trial_types[trial_ix]);
@@ -164,16 +173,15 @@ void GoNogo() {
       tone(pin_tone, trial_tone_freq, trial_tone_dur);
       behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
     }
-    if (! rewarded && ts >= ts_response_window && ts < ts_timeout) {
+    if (! responded && ts >= ts_response_window && ts < ts_timeout) {
       if (! response_started) {
         response_started = true;
         response_licks_base = lick_count;
       }
       else {
-        // Deliver reward
-        if (lick_count - response_licks_base) {
-          // response_ended = true;
-          rewarded = true;
+        if (lick_count - response_licks_base > 0) {
+          // Deliver reward
+          responded = true;
           ts_us = ts;
           digitalWrite(trial_sol_pin, HIGH);
           behav.SendData(stream, code_us_start, ts, cs_trial_types[trial_ix]);
@@ -181,14 +189,24 @@ void GoNogo() {
         }
       }
     }
-    if (lick_count - response_licks_base <= 0 && ts >= ts_timeout) {
-      // response_ended = true;
+    if (! responded && lick_count - response_licks_base <= 0 && ts >= ts_timeout) {
+      responded = true;
       behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 0);
     }
     if (ts >= ts_trial_end) {
       // Determine next trial
-      if (uniform_iti) next_trial_ts += mean_iti;
-      else next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
+      switch (iti_distro) {
+        case 0:
+          next_trial_ts += mean_iti;
+          break;
+        case 1:
+          next_trial_ts += behav.UniDistro(min_iti, max_iti);
+          break;
+        case 2:
+          next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
+          break;
+        break;
+      }
       behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[trial_ix + 1]);  // Still need to correct for last trial
 
       // Reset trial features
@@ -196,8 +214,7 @@ void GoNogo() {
       signaled = false;
       stimmed = false;
       response_started = false;
-      // response_ended = false;
-      rewarded = false;
+      responded = false;
       trial_ix++;
       if (! image_all) digitalWrite(pin_img_stop, HIGH);
     }

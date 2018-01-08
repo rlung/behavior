@@ -481,15 +481,15 @@ class InputManager(tk.Frame):
         ## Session values
         ## Example: 0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
         self.var_session_type.set(0)
-        self.entry_pre_session.insert(0, 5000)
-        self.entry_post_session.insert(0, 5000)
+        self.entry_pre_session.insert(0, 30000)
+        self.entry_post_session.insert(0, 30000)
         self.entry_cs0_num.insert(0, 3)
         self.entry_cs1_num.insert(0, 1)
         
         self.var_iti_distro.set(0)
         self.entry_mean_iti.insert(0, 60000)
-        self.entry_min_iti.insert(0, 17000)
-        self.entry_max_iti.insert(0, 360000)
+        self.entry_min_iti.insert(0, 40000)
+        self.entry_max_iti.insert(0, 80000)
         self.entry_pre_stim.insert(0, 7000)
         self.entry_post_stim.insert(0, 13000)
         
@@ -603,7 +603,7 @@ class InputManager(tk.Frame):
             self.ser.open()
         except serial.SerialException as err:
             # Error during serial.open()
-            err_msg = err.args[1]
+            err_msg = err.args[1] if is_py2 else err.message
             tkMessageBox.showerror('Serial error', err_msg)
             print('Serial error: ' + err_msg)
             self.close_serial()
@@ -649,13 +649,12 @@ class InputManager(tk.Frame):
         self.parameters['us1_delay'] = int(self.entry_us1_delay.get())
         self.parameters['us1_dur'] = int(self.entry_us1_dur.get())
 
-        if self.var_session_type.get():
-            self.parameters['trial_signal_offset'] = int(self.entry_trial_signal_offset.get())
-            self.parameters['trial_signal_dur'] = int(self.entry_trial_signal_dur.get())
-            self.parameters['trial_signal_freq'] = int(self.entry_trial_signal_freq.get())
-            self.parameters['grace_dur'] = int(self.entry_grace_dur.get())
-            self.parameters['response_dur'] = int(self.entry_response_dur.get())
-            self.parameters['timeout_dur'] = int(self.entry_timeout_dur.get())
+        self.parameters['trial_signal_offset'] = int(self.entry_trial_signal_offset.get())
+        self.parameters['trial_signal_dur'] = int(self.entry_trial_signal_dur.get())
+        self.parameters['trial_signal_freq'] = int(self.entry_trial_signal_freq.get())
+        self.parameters['grace_dur'] = int(self.entry_grace_dur.get())
+        self.parameters['response_dur'] = int(self.entry_response_dur.get())
+        self.parameters['timeout_dur'] = int(self.entry_timeout_dur.get())
 
         self.parameters['image_all'] = int(self.var_image_all.get())
         self.parameters['image_ttl_dur'] = int(self.entry_image_ttl_dur.get())
