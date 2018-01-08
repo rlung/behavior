@@ -13,18 +13,6 @@ file.
 Packages needed:
 - pyserial
 - slackclient
-
-
-TODO:
-- reset counter for responses
-- CS names
-- add graph of events
-x add weights as dataset to day group
-x scoreboard
-x link variable to ttk.Entry's
-x set up threads as daemons
-x update button for parameters closes window
-
 '''
 
 import sys
