@@ -11,6 +11,7 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
   static unsigned int trial_tone_dur;     // Defines tone duration for trial
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
   static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
+  static unsigned int trial_us_delay;
   static boolean in_trial;
   static boolean stimmed;
   static boolean rewarded;
@@ -32,18 +33,20 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
       trial_tone_dur = cs0_dur;
       trial_sol_pin = pin_sol_0;
       trial_sol_dur = us0_dur;
+      trial_us_delay = us0_delay;
     }
     else {
       trial_tone_freq = cs1_freq;
       trial_tone_dur = cs1_dur;
       trial_sol_pin = pin_sol_1;
       trial_sol_dur = us1_dur;
+      trial_us_delay = us1_delay;
     }
 
     // Determine timestamps for events
     ts_trial_start = ts;
     ts_stim = ts_trial_start + pre_stim;
-    ts_us = ts_stim + us_delay;
+    ts_us = ts_stim + trial_us_delay;
     ts_trial_end = ts_trial_start + trial_dur;
 
     // Start imaging (if applicable)
@@ -110,6 +113,7 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
   static unsigned int trial_tone_dur;     // Defines tone duration for trial
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
   static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
+  static unsigned int trial_vac_dur;
   static boolean in_trial;
   static boolean signaled;
   static boolean stimmed;
@@ -123,6 +127,8 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
   if (ts >= img_stop_ts + IMGPINDUR) digitalWrite(pin_img_stop, LOW);
   if (ts >= ts_trial_signal + trial_signal_dur) digitalWrite(pin_signal, LOW);
   if (ts >= ts_us + trial_sol_dur) digitalWrite(trial_sol_pin, LOW);
+  if (ts >= ts_us + consumption_dur) digitalWrite(pin_vac, HIGH);
+  if (ts >= ts_us + consumption_dur + trial_vac_dur) digitalWrite(pin_vac, LOW);
 
   // Check for trial start or session end
   if (trial_ix < trial_num && ! in_trial && ts >= next_trial_ts) {
@@ -135,12 +141,14 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
       trial_tone_dur = cs0_dur;
       trial_sol_pin = pin_sol_0;
       trial_sol_dur = us0_dur;
+      trial_vac_dur = us0_vac_dur;
     }
     else if (cs_trial_types[trial_ix] == 1) {
       trial_tone_freq = cs1_freq;
       trial_tone_dur = cs1_dur;
       trial_sol_pin = pin_sol_1;
       trial_sol_dur = us1_dur;
+      trial_vac_dur = us1_vac_dur;
     }
 
     // Determine timestamps for events
