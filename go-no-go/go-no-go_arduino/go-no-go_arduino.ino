@@ -48,6 +48,7 @@ const int pin_track_b = 4;
 const int pin_lick = 3;
 const int pin_sol_0 = 5;
 const int pin_sol_1 = 6;
+const int pin_vac = 4;
 
 const int pin_signal = 8;
 const int pin_tone = 7;
@@ -96,12 +97,13 @@ unsigned long trial_signal_freq;
 unsigned long grace_dur;
 unsigned long response_dur;
 unsigned long timeout_dur;
+unsigned long consumption_dur;
+unsigned long us0_vac_dur;
+unsigned long us1_vac_dur;
 
 boolean image_all;
 unsigned int image_ttl_dur;
 unsigned int track_period;
-
-unsigned long us_delay;
 
 // Other variables
 int *cs_trial_types;
@@ -137,7 +139,7 @@ void EndSession(unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 28;
+  const int paramNum = 31;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -172,12 +174,14 @@ void GetParams() {
   grace_dur = parameters[22];
   response_dur = parameters[23];
   timeout_dur = parameters[24];
+  consumption_dur = parameters[25];
+  us0_vac_dur = parameters[26];
+  us1_vac_dur = parameters[27];
 
-  image_all = parameters[25];
-  image_ttl_dur = parameters[26];
-  track_period = parameters[27];
+  image_all = parameters[28];
+  image_ttl_dur = parameters[29];
+  track_period = parameters[30];
 
-  us_delay = us0_delay;
   trial_num = cs0_num + cs1_num;
   trial_dur = pre_stim + post_stim;
 }
@@ -209,6 +213,7 @@ void setup() {
   // pinMode(pin_lick, INPUT);
   pinMode(pin_sol_0, OUTPUT);
   pinMode(pin_sol_1, OUTPUT);
+  pinMode(pin_vac, OUTPUT);
 
   pinMode(pin_signal, OUTPUT);
 
