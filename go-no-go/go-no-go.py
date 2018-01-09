@@ -255,10 +255,10 @@ class InputManager(tk.Frame):
 
         ### frame_session
         ### UI for session.
-        self.entry_cs0_num = tk.Entry(frame_session, width=entry_width)
-        self.entry_cs1_num = tk.Entry(frame_session, width=entry_width)
         self.entry_pre_session = tk.Entry(frame_session, width=entry_width)
         self.entry_post_session = tk.Entry(frame_session, width=entry_width)
+        self.entry_cs0_num = tk.Entry(frame_session, width=entry_width)
+        self.entry_cs1_num = tk.Entry(frame_session, width=entry_width)
         tk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -334,18 +334,27 @@ class InputManager(tk.Frame):
         self.entry_grace_dur = tk.Entry(frame_gonogo, width=entry_width)
         self.entry_response_dur = tk.Entry(frame_gonogo, width=entry_width)
         self.entry_timeout_dur = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_consumption_dur = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_us0_vac_dur = tk.Entry(frame_gonogo, width=entry_width)
+        self.entry_us1_vac_dur = tk.Entry(frame_gonogo, width=entry_width)
         tk.Label(frame_gonogo, text='Trial signal offset (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_gonogo, text='Trial signal duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_gonogo, text='Trial signal frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=2, column=0, sticky='e')
         tk.Label(frame_gonogo, text='Grace period (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
         tk.Label(frame_gonogo, text='Response window (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
         tk.Label(frame_gonogo, text='Timeout duration (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='Consumption time limit (ms): ', anchor='e').grid(row=6, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='US0 vacuum duration (ms): ', anchor='e').grid(row=7, column=0, sticky='e')
+        tk.Label(frame_gonogo, text='US1 vacuum duration (ms): ', anchor='e').grid(row=8, column=0, sticky='e')
         self.entry_trial_signal_offset.grid(row=0, column=1, sticky='w')
         self.entry_trial_signal_dur.grid(row=1, column=1, sticky='w')
         self.entry_trial_signal_freq.grid(row=2, column=1, sticky='w')
         self.entry_grace_dur.grid(row=3, column=1, sticky='w')
         self.entry_response_dur.grid(row=4, column=1, sticky='w')
         self.entry_timeout_dur.grid(row=5, column=1, sticky='w')
+        self.entry_consumption_dur.grid(row=6, column=1, sticky='w')
+        self.entry_us0_vac_dur.grid(row=7, column=1, sticky='w')
+        self.entry_us1_vac_dur.grid(row=8, column=1, sticky='w')
 
         ### frame_misc
         ### UI for other things.
@@ -420,6 +429,9 @@ class InputManager(tk.Frame):
             self.entry_grace_dur,
             self.entry_response_dur,
             self.entry_timeout_dur,
+            self.entry_consumption_dur,
+            self.entry_us0_vac_dur,
+            self.entry_us1_vac_dur,
         ]
         self.obj_to_disable_at_open = [
             self.option_ports,
@@ -508,6 +520,9 @@ class InputManager(tk.Frame):
         self.entry_grace_dur.insert(0, 2000)
         self.entry_response_dur.insert(0, 2000)
         self.entry_timeout_dur.insert(0, 0)
+        self.entry_consumption_dur.insert(0, 10000)
+        self.entry_us0_vac_dur.insert(0, 50)
+        self.entry_us1_vac_dur.insert(0, 50)
 
         self.var_image_all.set(0)
         self.entry_image_ttl_dur.insert(0, 100)
@@ -655,6 +670,9 @@ class InputManager(tk.Frame):
         self.parameters['grace_dur'] = int(self.entry_grace_dur.get())
         self.parameters['response_dur'] = int(self.entry_response_dur.get())
         self.parameters['timeout_dur'] = int(self.entry_timeout_dur.get())
+        self.parameters['consumption_dur'] = int(self.entry_consumption_dur.get())
+        self.parameters['us0_vac_dur'] = int(self.entry_us0_vac_dur.get())
+        self.parameters['us1_vac_dur'] = int(self.entry_us1_vac_dur.get())
 
         self.parameters['image_all'] = int(self.var_image_all.get())
         self.parameters['image_ttl_dur'] = int(self.entry_image_ttl_dur.get())
