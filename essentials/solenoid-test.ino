@@ -9,7 +9,7 @@ void setup() {
 void loop() {
   int dur;
 
-  if Serial.available() {
+  if (Serial.available()) {
     delay(5);   // Just make sure all data is transmitted
     
     dur = Serial.parseInt();
