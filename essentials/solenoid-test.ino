@@ -7,10 +7,12 @@ void setup() {
 }
 
 void loop() {
+  int dur;
+
   if Serial.available() {
     delay(5);   // Just make sure all data is transmitted
     
-    int dur = Serial.parseInt();
+    dur = Serial.parseInt();
     digitalWrite(pin_sol, HIGH);
     delay(dur);
     digitalWrite(pin_sol, LOW);
