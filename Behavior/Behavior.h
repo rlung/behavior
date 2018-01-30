@@ -15,6 +15,7 @@
 class Behavior {
   public:
     Behavior();
+    unsigned long UniDistro(unsigned long min_val, unsigned long max_val);
     unsigned long ExpDistro(unsigned long mean_val, unsigned long min_val, unsigned long max_val);
     void Shuffle(int *arr, int n_elements);
     void SendData(Stream &stream, unsigned int code, unsigned long ts, long data);

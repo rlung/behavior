@@ -12,6 +12,15 @@
 Behavior::Behavior() {}
 
 
+unsigned long Behavior::UniDistro(unsigned long min_val, unsigned long max_val) {
+  // Generate a random number from a uniform distribution between `min_val` and `max_val`.
+
+  float u = (float) random(0, 10000) / 10000;
+
+  return u * (max_val - min_val) + min_val;
+}
+
+
 unsigned long Behavior::ExpDistro(unsigned long mean_val, unsigned long min_val, unsigned long max_val) {
   // Generate a random number `u` from a uniform distribution [0, 1) and 
   // transform into an exponential distribution:
