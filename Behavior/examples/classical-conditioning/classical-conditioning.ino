@@ -243,7 +243,6 @@ void loop() {
   static boolean stimmed;
   static boolean rewarded;
   static boolean lick_state;
-  static boolean reward_signal;           // Indicates if criterion for reward met (eg, lick on Go)
 
   // Timestamp
   static const unsigned long start = millis();  // record start of session
