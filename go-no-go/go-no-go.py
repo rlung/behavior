@@ -85,6 +85,7 @@ class InputManager(tk.Frame):
         #     ~ frame_gonogo
         #     ~ frame_csus0
         #     ~ frame_csus1
+        #     ~ frame_csus2
         #     ~ frame_misc
         #   + frame_notes
         #   + frame_file
@@ -153,6 +154,7 @@ class InputManager(tk.Frame):
         frame_trial = tk.Frame(frame_params)
         frame_csus0 = tk.Frame(frame_params)
         frame_csus1 = tk.Frame(frame_params)
+        frame_csus2 = tk.Frame(frame_params)
         frame_gonogo = tk.Frame(frame_params)
         frame_misc = tk.Frame(frame_params)
         frame_session_type.grid(row=0, column=0, sticky='e', padx=px, pady=py)
@@ -160,8 +162,9 @@ class InputManager(tk.Frame):
         frame_trial.grid(row=2, column=0, sticky='e', padx=px, pady=py)
         frame_csus0.grid(row=3, column=0, sticky='e', padx=px, pady=py)
         frame_csus1.grid(row=4, column=0, sticky='e', padx=px, pady=py)
-        frame_gonogo.grid(row=5, column=0, sticky='e', padx=px, pady=py)
-        frame_misc.grid(row=6, column=0, sticky='e', padx=px, pady=py)
+        frame_csus2.grid(row=5, column=0, sticky='e', padx=px, pady=py)
+        frame_gonogo.grid(row=6, column=0, sticky='e', padx=px, pady=py)
+        frame_misc.grid(row=7, column=0, sticky='e', padx=px, pady=py)
 
         ### Notes frame
         frame_notes = tk.Frame(frame_setup_col2)
@@ -259,14 +262,17 @@ class InputManager(tk.Frame):
         self.entry_post_session = tk.Entry(frame_session, width=entry_width)
         self.entry_cs0_num = tk.Entry(frame_session, width=entry_width)
         self.entry_cs1_num = tk.Entry(frame_session, width=entry_width)
+        self.entry_cs2_num = tk.Entry(frame_session, width=entry_width)
         tk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
         tk.Label(frame_session, text='Number of CS1: ', anchor='e').grid(row=3, column=0, sticky='e')
+        tk.Label(frame_session, text='Number of CS2: ', anchor='e').grid(row=4, column=0, sticky='e')
         self.entry_pre_session.grid(row=0, column=1, sticky='w')
         self.entry_post_session.grid(row=1, column=1, sticky='w')
         self.entry_cs0_num.grid(row=2, column=1, sticky='w')
         self.entry_cs1_num.grid(row=3, column=1, sticky='w')
+        self.entry_cs2_num.grid(row=4, column=1, sticky='w')
 
         ### frame_trial
         ### UI for trial.
@@ -325,6 +331,21 @@ class InputManager(tk.Frame):
         self.entry_cs1_freq.grid(row=15, column=1, sticky='w')
         self.entry_us1_delay.grid(row=16, column=1, sticky='w')
         self.entry_us1_dur.grid(row=17, column=1, sticky='w')
+
+        ### frame_csus2
+        ### UI for CS-US 1.
+        self.entry_cs2_dur = tk.Entry(frame_csus2, width=entry_width)
+        self.entry_cs2_freq = tk.Entry(frame_csus2, width=entry_width)
+        self.entry_us2_delay = tk.Entry(frame_csus2, width=entry_width)
+        self.entry_us2_dur = tk.Entry(frame_csus2, width=entry_width)
+        tk.Label(frame_csus2, text='CS2 duration (ms): ', anchor='e').grid(row=14, column=0, sticky='e')
+        tk.Label(frame_csus2, text='CS2 frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=15, column=0, sticky='e')
+        tk.Label(frame_csus2, text='US2 delay (ms): ', anchor='e').grid(row=16, column=0, sticky='e')
+        tk.Label(frame_csus2, text='US2 duration (ms): ', anchor='e').grid(row=17, column=0, sticky='e')
+        self.entry_cs2_dur.grid(row=14, column=1, sticky='w')
+        self.entry_cs2_freq.grid(row=15, column=1, sticky='w')
+        self.entry_us2_delay.grid(row=16, column=1, sticky='w')
+        self.entry_us2_dur.grid(row=17, column=1, sticky='w')
 
         ### frame_gonogo
         ### UI for trial start (signal)
@@ -443,6 +464,7 @@ class InputManager(tk.Frame):
             self.entry_post_session,
             self.entry_cs0_num,
             self.entry_cs1_num,
+            self.entry_cs2_num,
             self.radio_fixed_iti,
             self.radio_uniform_iti,
             self.radio_expo_iti,
@@ -459,6 +481,10 @@ class InputManager(tk.Frame):
             self.entry_cs1_freq,
             self.entry_us1_delay,
             self.entry_us1_dur,
+            self.entry_cs2_dur,
+            self.entry_cs2_freq,
+            self.entry_us2_delay,
+            self.entry_us2_dur,
             self.entry_trial_signal_offset,
             self.entry_trial_signal_dur,
             self.entry_trial_signal_freq,
@@ -497,6 +523,7 @@ class InputManager(tk.Frame):
         self.entry_post_session.insert(0, 30000)
         self.entry_cs0_num.insert(0, 3)
         self.entry_cs1_num.insert(0, 1)
+        self.entry_cs2_num.insert(0, 1)
         
         self.var_iti_distro.set(0)
         self.entry_mean_iti.insert(0, 60000)
@@ -513,6 +540,10 @@ class InputManager(tk.Frame):
         self.entry_cs1_freq.insert(0, 5000)
         self.entry_us1_delay.insert(0, 3000)
         self.entry_us1_dur.insert(0, 50)
+        self.entry_cs2_dur.insert(0, 2000)
+        self.entry_cs2_freq.insert(0, 10000)
+        self.entry_us2_delay.insert(0, 3000)
+        self.entry_us2_dur.insert(0, 50)
 
         self.entry_trial_signal_offset.insert(0, 0)
         self.entry_trial_signal_dur.insert(0, 0)
