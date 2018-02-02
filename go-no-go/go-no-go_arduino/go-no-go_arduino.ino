@@ -74,6 +74,7 @@ unsigned long pre_session;
 unsigned long post_session;
 int cs0_num;
 int cs1_num;
+int cs2_num;
 
 boolean iti_distro;
 unsigned long mean_iti;
@@ -84,12 +85,18 @@ unsigned long post_stim;
 
 unsigned long cs0_dur;
 unsigned long cs0_freq;
-unsigned long us0_delay;
 unsigned long us0_dur;
+unsigned long us0_delay;
 unsigned long cs1_dur;
 unsigned long cs1_freq;
-unsigned long us1_delay;
 unsigned long us1_dur;
+unsigned long us1_delay;
+unsigned long cs2_dur;
+unsigned long cs2_freq;
+unsigned long us2_dur;
+unsigned long us2_delay;
+unsigned long consumption_dur;
+unsigned long vac_dur;
 
 unsigned long trial_signal_offset;
 unsigned long trial_signal_dur;
@@ -97,9 +104,6 @@ unsigned long trial_signal_freq;
 unsigned long grace_dur;
 unsigned long response_dur;
 unsigned long timeout_dur;
-unsigned long consumption_dur;
-unsigned long us0_vac_dur;
-unsigned long us1_vac_dur;
 
 boolean image_all;
 unsigned int image_ttl_dur;
@@ -139,7 +143,7 @@ void EndSession(unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 31;
+  const int paramNum = 35;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -151,38 +155,46 @@ void GetParams() {
   post_session = parameters[2];
   cs0_num = parameters[3];
   cs1_num = parameters[4];
+  cs2_num = parameters[5];
 
-  iti_distro = parameters[5];
-  mean_iti = parameters[6];
-  min_iti = parameters[7];
-  max_iti = parameters[8];
-  pre_stim = parameters[9];
-  post_stim = parameters[10];
+  iti_distro = parameters[6];
+  mean_iti = parameters[7];
+  min_iti = parameters[8];
+  max_iti = parameters[9];
+  pre_stim = parameters[10];
+  post_stim = parameters[11];
 
-  cs0_dur = parameters[11];
-  cs0_freq = parameters[12];
-  us0_delay = parameters[13];
+  cs0_dur = parameters[12];
+  cs0_freq = parameters[13];
   us0_dur = parameters[14];
-  cs1_dur = parameters[15];
-  cs1_freq = parameters[16];
-  us1_delay = parameters[17];
+  us0_delay = parameters[15];
+  cs1_dur = parameters[16];
+  cs1_freq = parameters[17];
   us1_dur = parameters[18];
+  us1_delay = parameters[19];
+  cs2_dur = parameters[20];
+  cs2_freq = parameters[21];
+  us2_dur = parameters[22];
+  us2_delay = parameters[23];
+  consumption_dur = parameters[24];
+  vac_dur = parameters[25];
 
-  trial_signal_offset = parameters[19];
-  trial_signal_dur = parameters[20];
-  trial_signal_freq = parameters[21];
-  grace_dur = parameters[22];
-  response_dur = parameters[23];
-  timeout_dur = parameters[24];
-  consumption_dur = parameters[25];
-  us0_vac_dur = parameters[26];
-  us1_vac_dur = parameters[27];
+  trial_signal_offset = parameters[26];
+  trial_signal_dur = parameters[27];
+  trial_signal_freq = parameters[28];
+  grace_dur = parameters[29];
+  response_dur = parameters[30];
+  timeout_dur = parameters[31];
 
-  image_all = parameters[28];
-  image_ttl_dur = parameters[29];
-  track_period = parameters[30];
+  image_all = parameters[32];
+  image_ttl_dur = parameters[33];
+  track_period = parameters[34];
 
-  trial_num = cs0_num + cs1_num;
+  if (session_type == 0) {
+    trial_num = cs0_num + cs1_num + cs2_num;
+  } else if (session_type == 1) {
+    trial_num = cs0_num + cs1_num;
+  }
   trial_dur = pre_stim + post_stim;
 }
 
@@ -248,7 +260,8 @@ void setup() {
   for (int tt = 0; tt < trial_num; tt++) {
     // Assign appropriate number of CS+ trials
     if (tt < cs0_num) cs_trial_types[tt] = 0;
-    else cs_trial_types[tt] = 1;
+    else if (tt < cs1_num) cs_trial_types[tt] = 1;
+    else cs_trial_types[tt] = 2;
   }
   behav.Shuffle(cs_trial_types, trial_num);
 
