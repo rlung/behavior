@@ -21,40 +21,47 @@ data has `data` encoded as the CS type. Response is coded with CS type and lick
 or not (CS is second bit, lick is first bit, eg, 3 is CS 1, lick; 2 is CS 1 no 
 lick).
 
-Example inputs:
-0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
-0+3000+3000+3+1 + 0+45000+3000+120000+1000+1000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
+Example input:
+0, 0, 0, 3, 4, 5, 0, 22000, 25000, 180000, 7000, 13000, 2000, 1000, 50, 3000, 2000, 5000, 50, 3000, 2000, 10000, 50, 3000, 8000, 50, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
 
-
-TODO
-switch bw classical conditioning and go no go
 */
 
 
 #include <Behavior.h>
 
-#define LICK_THRESHOLD 100
+#define LICK_THRESHOLD 511
 #define IMGPINDUR 100     // Length of imaging signal pulse
 #define CODEEND 48
-#define STARTCODE 69
+#define CODEVACON 49
+#define CODEVACOFF 50
+#define CODEVACTRIGGER 51
+#define CODESOL0ON 52
+#define CODESOL0OFF 53
+#define CODESOL0TRIGGER 54
+#define CODESOL1ON 55
+#define CODESOL1OFF 56
+#define CODESOL1TRIGGER 57
+#define CODESOL2ON 58
+#define CODESOL2OFF 59
+#define CODESOL2TRIGGER 60
+#define CODEPARAMS 68
+#define CODESTART 69
 #define DELIM ","         // Delimiter used for serial communication
 #define DEBUG 1
 
 
 // Pins
 const int pin_track_a = 2;
-const int pin_track_b = 4;
-
+const int pin_track_b = 3;
 const int pin_lick = 3;
+const int pin_vac = 4;
 const int pin_sol_0 = 5;
 const int pin_sol_1 = 6;
-const int pin_vac = 4;
-
+const int pin_sol_2 = 7;
 const int pin_signal = 8;
-const int pin_tone = 7;
-
-const int pin_img_start = 9;
-const int pin_img_stop  = 10;
+const int pin_tone = 9;
+const int pin_img_start = 10;
+const int pin_img_stop  = 11;
 
 
 // Output codes
@@ -82,7 +89,6 @@ unsigned long min_iti;
 unsigned long max_iti;
 unsigned long pre_stim;
 unsigned long post_stim;
-
 unsigned long cs0_dur;
 unsigned long cs0_freq;
 unsigned long us0_dur;
@@ -97,14 +103,12 @@ unsigned long us2_dur;
 unsigned long us2_delay;
 unsigned long consumption_dur;
 unsigned long vac_dur;
-
 unsigned long trial_signal_offset;
 unsigned long trial_signal_dur;
 unsigned long trial_signal_freq;
 unsigned long grace_dur;
 unsigned long response_dur;
 unsigned long timeout_dur;
-
 boolean image_all;
 unsigned int image_ttl_dur;
 unsigned int track_period;
@@ -141,6 +145,73 @@ void EndSession(unsigned long ts) {
 }
 
 
+void WaitForSignal(int waiting_for) {
+  byte reading;
+
+  while (1) {
+    if (Serial.available()) {
+      reading = Serial.read();
+      switch(reading) {
+        case CODEEND:
+          EndSession(0);
+          break;
+        case CODEVACON:
+          digitalWrite(pin_vac, HIGH);
+          break;
+        case CODEVACOFF:
+          digitalWrite(pin_vac, LOW);
+          break;
+        case CODEVACTRIGGER:
+          digitalWrite(pin_vac, HIGH);
+          delay(vac_dur);
+          digitalWrite(pin_vac, LOW);
+          break;
+        case CODESOL0ON:
+          digitalWrite(pin_sol_0, HIGH);
+          break;
+        case CODESOL0OFF:
+          digitalWrite(pin_sol_0, LOW);
+          break;
+        case CODESOL0TRIGGER:
+          digitalWrite(pin_sol_0, HIGH);
+          delay(us0_dur);
+          digitalWrite(pin_sol_0, LOW);
+          break;
+        case CODESOL1ON:
+          digitalWrite(pin_sol_1, HIGH);
+          break;
+        case CODESOL1OFF:
+          digitalWrite(pin_sol_1, LOW);
+          break;
+        case CODESOL1TRIGGER:
+          digitalWrite(pin_sol_1, HIGH);
+          delay(us1_dur);
+          digitalWrite(pin_sol_1, LOW);
+          break;
+        case CODESOL2ON:
+          digitalWrite(pin_sol_2, HIGH);
+          break;
+        case CODESOL2OFF:
+          digitalWrite(pin_sol_2, LOW);
+          break;
+        case CODESOL2TRIGGER:
+          digitalWrite(pin_sol_2, HIGH);
+          delay(us2_dur);
+          digitalWrite(pin_sol_2, LOW);
+          break;
+        case CODEPARAMS:
+          if (waiting_for == 0) return;   // GetParams
+          break;
+        case CODESTART:
+          if (waiting_for == 1) return;   // Start session
+          break;
+        break;
+      }
+    }
+  }
+}
+
+
 void GetParams() {
   // Retrieve parameters from serial
   const int paramNum = 35;
@@ -156,14 +227,12 @@ void GetParams() {
   cs0_num = parameters[3];
   cs1_num = parameters[4];
   cs2_num = parameters[5];
-
   iti_distro = parameters[6];
   mean_iti = parameters[7];
   min_iti = parameters[8];
   max_iti = parameters[9];
   pre_stim = parameters[10];
   post_stim = parameters[11];
-
   cs0_dur = parameters[12];
   cs0_freq = parameters[13];
   us0_dur = parameters[14];
@@ -178,14 +247,12 @@ void GetParams() {
   us2_delay = parameters[23];
   consumption_dur = parameters[24];
   vac_dur = parameters[25];
-
   trial_signal_offset = parameters[26];
   trial_signal_dur = parameters[27];
   trial_signal_freq = parameters[28];
   grace_dur = parameters[29];
   response_dur = parameters[30];
   timeout_dur = parameters[31];
-
   image_all = parameters[32];
   image_ttl_dur = parameters[33];
   track_period = parameters[34];
@@ -198,22 +265,6 @@ void GetParams() {
   trial_dur = pre_stim + post_stim;
 }
 
-
-void WaitForStart() {
-  byte reading;
-
-  while (1) {
-    reading = Serial.read();
-    switch(reading) {
-      case CODEEND:
-        EndSession(0);
-      case STARTCODE:
-        return;   // Start session
-    }
-  }
-}
-
-
 void setup() {
   Serial.begin(9600);
   randomSeed(analogRead(0));
@@ -221,23 +272,21 @@ void setup() {
   // Set pins
   pinMode(pin_track_a, INPUT);
   pinMode(pin_track_b, INPUT);
-
-  // pinMode(pin_lick, INPUT);
+  pinMode(pin_vac, OUTPUT);
   pinMode(pin_sol_0, OUTPUT);
   pinMode(pin_sol_1, OUTPUT);
-  pinMode(pin_vac, OUTPUT);
-
+  pinMode(pin_sol_2, OUTPUT);
   pinMode(pin_signal, OUTPUT);
-
   pinMode(pin_img_start, OUTPUT);
   pinMode(pin_img_stop, OUTPUT);
 
   // Wait for parameters from serial
   Serial.println(
-    "Go/no-go task\n"
+    "Go/no-go & Classical conditioning tasks\n"
     "Waiting for parameters..."
   );
-  while (Serial.available() <= 0);
+  WaitForSignal(0);
+  
   GetParams();
   Serial.println("Parameters processed");
 
@@ -267,7 +316,7 @@ void setup() {
 
   // Wait for start signal
   Serial.println("Waiting for start signal ('E')");
-  WaitForStart();
+  WaitForSignal(1);
 
   // Set interrupt
   // Do not set earlier; `Track` will be called before session starts.
