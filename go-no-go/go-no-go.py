@@ -14,9 +14,6 @@ Packages needed:
 - pyserial
 - slackclient
 
-
-Todo:
-- add button for manual delivery
 '''
 
 import sys
@@ -78,6 +75,20 @@ py = 5
 px1 = 5
 py1 = 2
 
+# Should do following as byte in decimal form...
+code_vac_on = '1'
+code_vac_off = '2'
+code_vac_trig = '3'
+code_sol0_on = '4'
+code_sol0_off = '5'
+code_sol0_trig = '6'
+code_sol1_on = '7'
+code_sol1_off = '8'
+code_sol1_trig = '9'
+code_sol2_on = ':'
+code_sol2_off = ';'
+code_sol2_trig = '<'
+
 
 class InputManager(tk.Frame):
 
@@ -102,9 +113,8 @@ class InputManager(tk.Frame):
         #     ~ debug_frame
         #   + frame_start
         #   + slack_frame
-        # - monitor_frame
-        #   + (figure)
-        #   + scoreboard_frame
+        # - frame_monitor
+        #   + frame_solenoid
         # 
         # parameters
         # - frame_gonogo
@@ -275,6 +285,17 @@ class InputManager(tk.Frame):
         frame_start.grid_columnconfigure(0, weight=1)
         frame_start.grid_columnconfigure(1, weight=1)
 
+        ## Monitor frame
+        frame_monitor = tk.Frame(parent)
+        frame_monitor.grid(row=1, column=0)
+        frame_setup_col0 = tk.Frame(frame_monitor)
+        frame_setup_col0.grid(row=0, column=0, sticky='we')
+
+        ### Solenoid frame
+        frame_sol = tk.Frame(frame_monitor)
+        frame_sol.grid(row=0, column=0, sticky='we', padx=px, pady=py)
+        frame_debug.grid_columnconfigure(0, weight=1)  # Fills into frame
+
         # Add GUI components
 
         ## Camera preview
@@ -422,11 +443,52 @@ class InputManager(tk.Frame):
         self.button_start['state'] = 'disabled'
         self.button_stop['state'] = 'disabled'
 
+        ## frame_sol
+        ## UI for controlling solenoids.
+        self.button_vac_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_vac_on))
+        self.button_vac_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_vac_off))
+        self.button_vac_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_vac_trig))
+        self.button_sol0_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_sol0_on))
+        self.button_sol0_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_sol0_off))
+        self.button_sol0_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_sol0_trig))
+        self.button_sol1_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_sol1_on))
+        self.button_sol1_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_sol1_off))
+        self.button_sol1_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_sol1_trig))
+        self.button_sol2_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_sol2_on))
+        self.button_sol2_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_sol2_off))
+        self.button_sol2_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_sol2_trig))
+        tk.Label(frame_sol, text='Vacuum: ', anchor='e').grid(row=0, column=0, sticky='we')
+        tk.Label(frame_sol, text='Solenoid 0: ', anchor='e').grid(row=1, column=0, sticky='we')
+        tk.Label(frame_sol, text='Solenoid 1: ', anchor='e').grid(row=2, column=0, sticky='we')
+        tk.Label(frame_sol, text='Solenoid 2: ', anchor='e').grid(row=3, column=0, sticky='we')
+        self.button_vac_on.grid(row=0, column=1, sticky='we')
+        self.button_vac_off.grid(row=0, column=2, sticky='we')
+        self.button_vac_trig.grid(row=0, column=3, sticky='we')
+        self.button_sol0_on.grid(row=1, column=1, sticky='we')
+        self.button_sol0_off.grid(row=1, column=2, sticky='we')
+        self.button_sol0_trig.grid(row=1, column=3, sticky='we')
+        self.button_sol1_on.grid(row=2, column=1, sticky='we')
+        self.button_sol1_off.grid(row=2, column=2, sticky='we')
+        self.button_sol1_trig.grid(row=2, column=3, sticky='we')
+        self.button_sol2_on.grid(row=3, column=1, sticky='we')
+        self.button_sol2_off.grid(row=3, column=2, sticky='we')
+        self.button_sol2_trig.grid(row=3, column=3, sticky='we')
+
+        self.button_vac_on['state'] = 'disabled'
+        self.button_vac_off['state'] = 'disabled'
+        self.button_vac_trig['state'] = 'disabled'
+        self.button_sol0_on['state'] = 'disabled'
+        self.button_sol0_off['state'] = 'disabled'
+        self.button_sol0_trig['state'] = 'disabled'
+        self.button_sol1_on['state'] = 'disabled'
+        self.button_sol1_off['state'] = 'disabled'
+        self.button_sol1_trig['state'] = 'disabled'
+        self.button_sol2_on['state'] = 'disabled'
+        self.button_sol2_off['state'] = 'disabled'
+        self.button_sol2_trig['state'] = 'disabled'
+
         ## Group GUI objects
         self.obj_to_disable_at_open = [
-            self.option_ports,
-            self.button_open_port,
-            self.button_update_ports,
             self.radio_conditioning,
             self.radio_gonogo,
             self.entry_pre_session,
@@ -434,19 +496,43 @@ class InputManager(tk.Frame):
             self.entry_cs0_num,
             self.entry_cs1_num,
             self.entry_cs2_num,
+            self.button_params,
             self.check_image_all,
             self.entry_image_ttl_dur,
             self.entry_track_period,
+            self.option_ports,
+            self.button_open_port,
+            self.button_update_ports,
         ]
         self.obj_to_enable_when_open = [
             self.button_close_port,
             self.button_start,
+            self.button_vac_on,
+            self.button_vac_off,
+            self.button_vac_trig,
+            self.button_sol0_on,
+            self.button_sol0_off,
+            self.button_sol0_trig,
+            self.button_sol1_on,
+            self.button_sol1_off,
+            self.button_sol1_trig,
+            self.button_sol2_on,
+            self.button_sol2_off,
+            self.button_sol2_trig,
         ]
         self.obj_to_disable_at_start = [
             self.button_close_port,
             self.button_find_file,
             self.button_slack,
             self.button_start,
+            self.button_vac_on,
+            self.button_vac_off,
+            self.button_sol0_on,
+            self.button_sol0_off,
+            self.button_sol1_on,
+            self.button_sol1_off,
+            self.button_sol2_on,
+            self.button_sol2_off,
         ]
         self.obj_to_enable_at_start = [
             self.button_stop,
@@ -458,7 +544,6 @@ class InputManager(tk.Frame):
         self.obj_enabled_at_open = [False] * len(self.obj_to_disable_at_open)
 
         # Default values
-        ## Example: 0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
         self.entry_pre_session.insert(0, self.var_pre_session.get())
         self.entry_post_session.insert(0, self.var_post_session.get())
         self.entry_cs0_num.insert(0, self.var_cs0_num.get())
@@ -852,7 +937,7 @@ class InputManager(tk.Frame):
         self.text_params.delete(0.0, 'end')
         self.text_params.insert(0.0, summary)
 
-    def open_serial(self, delay=3, timeout=5):
+    def open_serial(self, delay=3, timeout=5, code_params='D'):
         '''Open serial connection to Arduino
         Executes when 'Open' button is pressed. `delay` sets amount of time (in
         seconds) to wait for the Arduino to be ready after serial is open.
@@ -934,7 +1019,7 @@ class InputManager(tk.Frame):
         # Send parameters and make sure it's processed
         values = self.parameters.values()
         if self.var_verbose.get(): print('Sending parameters: {}'.format(values))
-        self.ser.write('+'.join(str(s) for s in values))
+        self.ser.write(code_params + '+'.join(str(s) for s in values))
 
         start_time = time.time()
         while 1:
@@ -977,6 +1062,9 @@ class InputManager(tk.Frame):
         else:
             self.port_var.set('No ports found')
 
+    def ser_write(self, code):
+        self.ser.write(code)
+
     def get_save_file(self):
         '''Opens prompt for file for data to be saved on button press'''
 
@@ -990,7 +1078,7 @@ class InputManager(tk.Frame):
         self.entry_file.delete(0, 'end')
         self.entry_file.insert(0, save_file)
 
-    def start(self):
+    def start(self, code_start='E'):
         '''Start session on button press'''
 
         self.gui_util('start')
@@ -1076,7 +1164,7 @@ class InputManager(tk.Frame):
         }
 
         # Start session
-        self.ser.write('E')
+        self.ser.write(code_start)
         thread_scan.start()
         print('Session started at {}'.format(datetime.now().time()))
 
