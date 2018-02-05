@@ -174,9 +174,9 @@ class InputManager(tk.Frame):
         self.var_session_type.set(0)
         self.var_pre_session.set(0)
         self.var_post_session.set(0)
-        self.var_cs0_num.set(3)
-        self.var_cs1_num.set(4)
-        self.var_cs2_num.set(5)
+        self.var_cs0_num.set(15)
+        self.var_cs1_num.set(15)
+        self.var_cs2_num.set(0)
 
         self.var_iti_distro.set(0)
         self.var_mean_iti.set(60000)
@@ -1087,7 +1087,7 @@ class InputManager(tk.Frame):
         if self.entry_file.get():
             try:
                 # Create file if it doesn't already exist ('x' parameter)
-                self.data_file = h5py.File(self.entry_save.get(), 'x')
+                self.data_file = h5py.File(self.entry_file.get(), 'x')
             except IOError:
                 tkMessageBox.showerror('File error', 'Could not create file to save data.')
                 self.gui_util('stop')
