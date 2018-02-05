@@ -63,7 +63,6 @@ const int pin_tone = 9;
 const int pin_img_start = 10;
 const int pin_img_stop  = 11;
 
-
 // Output codes
 const int code_end = 0;
 const int code_lick = 1;
@@ -82,7 +81,6 @@ unsigned long post_session;
 int cs0_num;
 int cs1_num;
 int cs2_num;
-
 boolean iti_distro;
 unsigned long mean_iti;
 unsigned long min_iti;
