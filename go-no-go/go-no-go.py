@@ -177,14 +177,12 @@ class InputManager(tk.Frame):
         self.var_cs0_num.set(15)
         self.var_cs1_num.set(15)
         self.var_cs2_num.set(0)
-
         self.var_iti_distro.set(0)
         self.var_mean_iti.set(60000)
         self.var_min_iti.set(25000)
         self.var_max_iti.set(180000)
         self.var_pre_stim.set(7000)
         self.var_post_stim.set(13000)
-
         self.var_cs0_dur.set(2000)
         self.var_cs0_freq.set(1000)
         self.var_us0_delay.set(3000)
@@ -199,14 +197,12 @@ class InputManager(tk.Frame):
         self.var_us2_dur.set(50)
         self.var_consumption_dur.set(8000)
         self.var_vac_dur.set(50)
-
         self.var_trial_signal_offset.set(2000)
         self.var_trial_signal_dur.set(1000)
         self.var_trial_signal_freq.set(0)
         self.var_grace_dur.set(2000)
         self.var_response_dur.set(2000)
         self.var_timeout_dur.set(8000)
-
         self.var_image_all.set(0)
         self.var_image_ttl_dur.set(100)
         self.var_track_period.set(50)
@@ -977,11 +973,16 @@ class InputManager(tk.Frame):
         self.parameters = collections.OrderedDict()   # Clear self.parameters (maybe not necessary)
 
         self.parameters['session_type'] = self.var_session_type.get()
-        self.parameters['pre_session'] = self.var_pre_session.get()
-        self.parameters['post_session'] = self.var_post_session.get()
-        self.parameters['cs0_num'] = self.var_cs0_num.get()
-        self.parameters['cs1_num'] = self.var_cs1_num.get()
-        self.parameters['cs2_num'] = self.var_cs2_num.get()
+        # self.parameters['pre_session'] = self.var_pre_session.get()
+        # self.parameters['post_session'] = self.var_post_session.get()
+        # self.parameters['cs0_num'] = self.var_cs0_num.get()
+        # self.parameters['cs1_num'] = self.var_cs1_num.get()
+        # self.parameters['cs2_num'] = self.var_cs2_num.get()
+        self.parameters['pre_session'] = int(self.entry_pre_session.get())
+        self.parameters['post_session'] = int(self.entry_post_session.get())
+        self.parameters['cs0_num'] = int(self.entry_cs0_num.get())
+        self.parameters['cs1_num'] = int(self.entry_cs1_num.get())
+        self.parameters['cs2_num'] = int(self.entry_cs2_num.get())
 
         self.parameters['iti_distro'] = self.var_iti_distro.get()
         self.parameters['mean_iti'] = self.var_mean_iti.get()
@@ -1069,6 +1070,7 @@ class InputManager(tk.Frame):
         '''Opens prompt for file for data to be saved on button press'''
 
         save_file = tkFileDialog.asksaveasfilename(
+            initialdir=self.entry_file.get(),
             defaultextension='.h5',
             filetypes=[
                 ('HDF5 file', '*.h5 *.hdf5'),
