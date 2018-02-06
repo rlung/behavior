@@ -143,7 +143,11 @@ void EndSession(unsigned long ts) {
 }
 
 
-void WaitForSignal(int waiting_for) {
+void LookForSignal(int waiting_for, unsigned long ts) {
+  // `waiting_for` indicates signal to escape.
+  //    0: no signal, escape after one iteration
+  //    1: wait for parameters
+  //    2: wait for start signal
   byte reading;
 
   while (1) {
@@ -151,7 +155,7 @@ void WaitForSignal(int waiting_for) {
       reading = Serial.read();
       switch(reading) {
         case CODEEND:
-          EndSession(0);
+          EndSession(ts);
           break;
         case CODEVACON:
           digitalWrite(pin_vac, HIGH);
@@ -198,14 +202,16 @@ void WaitForSignal(int waiting_for) {
           digitalWrite(pin_sol_2, LOW);
           break;
         case CODEPARAMS:
-          if (waiting_for == 0) return;   // GetParams
+          if (waiting_for == 1) return;   // GetParams
           break;
         case CODESTART:
-          if (waiting_for == 1) return;   // Start session
+          if (waiting_for == 2) return;   // Start session
           break;
         break;
       }
     }
+
+    if (! waiting_for) return;
   }
 }
 
@@ -283,7 +289,7 @@ void setup() {
     "Go/no-go & Classical conditioning tasks\n"
     "Waiting for parameters..."
   );
-  WaitForSignal(0);
+  LookForSignal(1, 0);
   
   GetParams();
   Serial.println("Parameters processed");
@@ -314,7 +320,7 @@ void setup() {
 
   // Wait for start signal
   Serial.println("Waiting for start signal ('E')");
-  WaitForSignal(1);
+  LookForSignal(2, 0);
 
   // Set interrupt
   // Do not set earlier; `Track` will be called before session starts.
@@ -336,16 +342,7 @@ void loop() {
 
   // -- 0. SERIAL SCAN -- //
   // Read from computer
-  if (Serial.available() > 0) {
-    // Watch for information from computer.
-    byte reading = Serial.read();
-    switch(reading) {
-      case CODEEND:
-        EndSession(ts);
-        break;
-      break;
-    }
-  }
+  LookForSignal(0, ts);
 
   // -- 1. TRIAL CONTROL -- //
   switch (session_type) {

@@ -21,8 +21,11 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
   if (ts >= img_start_ts + IMGPINDUR) digitalWrite(pin_img_start, LOW);
   if (ts >= img_stop_ts + IMGPINDUR) digitalWrite(pin_img_stop, LOW);
   if (ts >= ts_us + trial_sol_dur) digitalWrite(trial_sol_pin, LOW);
-  if (ts >= ts_us + consumption_dur) digitalWrite(pin_vac, HIGH);
-  if (ts >= ts_us + consumption_dur + vac_dur) digitalWrite(pin_vac, LOW);
+  if (consumption_dur && ts_us) {
+    // Only check if time limit set for consumption & delivery has happened
+    if (ts >= ts_us + consumption_dur) digitalWrite(pin_vac, HIGH);
+    if (ts >= ts_us + consumption_dur + vac_dur) digitalWrite(pin_vac, LOW);
+  }
 
   // Check for trial start or session end
   if (trial_ix < trial_num && ! in_trial && ts >= next_trial_ts) {
@@ -128,8 +131,11 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
   if (ts >= img_stop_ts + IMGPINDUR) digitalWrite(pin_img_stop, LOW);
   if (ts >= ts_trial_signal + trial_signal_dur) digitalWrite(pin_signal, LOW);
   if (ts >= ts_us + trial_sol_dur) digitalWrite(trial_sol_pin, LOW);
-  if (ts >= ts_us + consumption_dur) digitalWrite(pin_vac, HIGH);
-  if (ts >= ts_us + consumption_dur + vac_dur) digitalWrite(pin_vac, LOW);
+  if (consumption_dur && ts_us) {
+    // Only check if time limit set for consumption & delivery has happened
+    if (ts >= ts_us + consumption_dur) digitalWrite(pin_vac, HIGH);
+    if (ts >= ts_us + consumption_dur + vac_dur) digitalWrite(pin_vac, LOW);
+  }
 
   // Check for trial start or session end
   if (trial_ix < trial_num && ! in_trial && ts >= next_trial_ts) {
