@@ -95,7 +95,6 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
         case 2:
           next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
           break;
-        break;
       }
       behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[trial_ix + 1]);  // Still need to correct for last trial
       // End trial
@@ -225,7 +224,6 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
         case 2:
           next_trial_ts += behav.ExpDistro(mean_iti, min_iti, max_iti);
           break;
-        break;
       }
       behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[trial_ix + 1]);  // Still need to correct for last trial
 

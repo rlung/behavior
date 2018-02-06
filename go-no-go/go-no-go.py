@@ -89,6 +89,13 @@ code_sol2_on = ':'
 code_sol2_off = ';'
 code_sol2_trig = '<'
 
+# Events to record
+events = [
+    'lick', 'lick_form', 'movement',
+    'trial_start', 'trial_signal', 'cs', 'us',
+    'response',
+]
+
 
 class InputManager(tk.Frame):
 
@@ -948,7 +955,7 @@ class InputManager(tk.Frame):
             self.ser.open()
         except serial.SerialException as err:
             # Error during serial.open()
-            err_msg = err.args[1] if is_py2 else err.message
+            err_msg = err.args[0] if is_py2 else err.message
             tkMessageBox.showerror('Serial error', err_msg)
             print('Serial error: ' + err_msg)
             self.close_serial()
@@ -1124,6 +1131,8 @@ class InputManager(tk.Frame):
         self.grp_behav = self.data_file.create_group('behavior')
         self.grp_behav.create_dataset(name='lick', dtype='uint32',
             shape=(2, n_movement_frames), chunks=(2, 1))
+        self.grp_behav.create_dataset(name='lick_form', dtype='uint32',
+            shape=(2, n_movement_frames), chunks=(2, 1))
         self.grp_behav.create_dataset(name='movement', dtype='int32',
             shape=(2, n_movement_frames), chunks=(2, 1))
         self.grp_behav.create_dataset(name='trial_start', dtype='uint32',
@@ -1159,11 +1168,7 @@ class InputManager(tk.Frame):
         )
 
         # Reset things
-        self.counter = {
-            'lick': 0, 'movement': 0,
-            'trial_start': 0, 'trial_signal':0, 'cs': 0, 'us': 0,
-            'response': 0
-        }
+        self.counter = {ev: 0 for ev in events}
 
         # Start session
         self.ser.write(code_start)
@@ -1186,6 +1191,7 @@ class InputManager(tk.Frame):
         # Codes
         code_end = 0;
         code_lick = 1;
+        code_lick_form = 9;
         code_movement = 2;
         code_trial_start = 3;
         code_trial_signal = 4;
@@ -1195,6 +1201,7 @@ class InputManager(tk.Frame):
         code_next_trial = 8;
         event = {
             code_lick: 'lick',
+            code_lick_form: 'lick_form',
             code_movement: 'movement',
             code_trial_start: 'trial_start',
             code_trial_signal: 'trial_signal',
@@ -1214,6 +1221,7 @@ class InputManager(tk.Frame):
         if not self.q_serial.empty():
             code, ts, data = self.q_serial.get()
 
+            # End session
             if code == code_end:
                 arduino_end = ts
                 # self.q_to_thread_rec.put(0)
@@ -1222,9 +1230,9 @@ class InputManager(tk.Frame):
                 print('Arduino ended, finalizing data...')
                 self.stop_session(arduino_end=arduino_end)
                 return
-            
+
             # Record event
-            if code < 8:
+            if code not in [8]:
                 self.grp_behav[event[code]][:, self.counter[event[code]]] = [ts, data]
                 self.counter[event[code]] += 1
 
@@ -1244,15 +1252,18 @@ class InputManager(tk.Frame):
 
         print("Writing behavioral data")
         self.grp_behav.attrs['end_time'] = end_time
-        self.grp_behav['lick'].resize((2, self.counter['lick']))
-        self.grp_behav['movement'].resize((2, self.counter['movement']))
-        self.grp_behav['trial_start'].resize((2, self.counter['trial_start']))
-        self.grp_behav['trial_signal'].resize((2, self.counter['trial_signal']))
-        self.grp_behav['cs'].resize((2, self.counter['cs']))
-        self.grp_behav['us'].resize((2, self.counter['us']))
-        self.grp_behav['response'].resize((2, self.counter['response']))
         self.grp_behav.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
         self.grp_behav.attrs['arduino_end'] = arduino_end
+        for ev in events:
+            self.grp_behav[ev].resize((2, self.counter[ev]))
+        # self.grp_behav['lick'].resize((2, self.counter['lick']))
+        # self.grp_behav['lick_form'].resize((2, self.counter['lick_form']))
+        # self.grp_behav['movement'].resize((2, self.counter['movement']))
+        # self.grp_behav['trial_start'].resize((2, self.counter['trial_start']))
+        # self.grp_behav['trial_signal'].resize((2, self.counter['trial_signal']))
+        # self.grp_behav['cs'].resize((2, self.counter['cs']))
+        # self.grp_behav['us'].resize((2, self.counter['us']))
+        # self.grp_behav['response'].resize((2, self.counter['response']))
 
         # self.grp_cam.attrs['end_time'] = end_time
         # if frame_cutoff:
