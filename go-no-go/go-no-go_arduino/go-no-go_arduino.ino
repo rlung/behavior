@@ -307,7 +307,7 @@ void setup() {
   for (int tt = 0; tt < trial_num; tt++) {
     // Assign appropriate number of CS+ trials
     if (tt < cs0_num) cs_trial_types[tt] = 0;
-    else if (tt < cs1_num) cs_trial_types[tt] = 1;
+    else if (tt < cs0_num + cs1_num) cs_trial_types[tt] = 1;
     else cs_trial_types[tt] = 2;
   }
   behav.Shuffle(cs_trial_types, trial_num);
