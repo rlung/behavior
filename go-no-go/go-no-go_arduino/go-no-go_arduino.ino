@@ -66,6 +66,7 @@ const int pin_img_stop  = 11;
 // Output codes
 const int code_end = 0;
 const int code_lick = 1;
+const int code_lick_form = 9;
 const int code_track = 2;
 const int code_trial_start = 3;
 const int code_trial_signal = 4;
@@ -144,8 +145,8 @@ void EndSession(unsigned long ts) {
 
 
 void LookForSignal(int waiting_for, unsigned long ts) {
-  // `waiting_for` indicates signal to escape.
-  //    0: no signal, escape after one iteration
+  // `waiting_for` indicates signal to look for before return.
+  //    0: don't wait for any signal, escape after one iteration
   //    1: wait for parameters
   //    2: wait for start signal
   byte reading;
@@ -207,7 +208,6 @@ void LookForSignal(int waiting_for, unsigned long ts) {
         case CODESTART:
           if (waiting_for == 2) return;   // Start session
           break;
-        break;
       }
     }
 
@@ -305,7 +305,6 @@ void setup() {
     case 2:
       next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
       break;
-    break;
   }
 
   // Shuffle trials
@@ -352,7 +351,6 @@ void loop() {
     case 1:
       GoNogo(ts, lick_count);
       break;
-    break;
   }
 
   // -- 2. TRACK MOVEMENT -- //
@@ -372,6 +370,7 @@ void loop() {
   boolean lick_state_now;
   // lick_state_now = digitalRead(pin_lick);
   int lick_reading = analogRead(pin_lick);
+  if (lick_reading < 900) behav.SendData(stream, code_lick_form, ts, lick_reading);
   if (lick_reading < LICK_THRESHOLD) lick_state_now = true;
   else lick_state_now = false;
 
