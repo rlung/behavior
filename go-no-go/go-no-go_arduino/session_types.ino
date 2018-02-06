@@ -33,19 +33,26 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
     in_trial = true;
 
     // Determine CS/US parameters
-    if (cs_trial_types[trial_ix]) {
+    if (cs_trial_types[trial_ix] == 0) {
       trial_tone_freq = cs0_freq;
       trial_tone_dur = cs0_dur;
       trial_sol_pin = pin_sol_0;
       trial_sol_dur = us0_dur;
       trial_us_delay = us0_delay;
     }
-    else {
+    else if (cs_trial_types[trial_ix] == 1) {
       trial_tone_freq = cs1_freq;
       trial_tone_dur = cs1_dur;
       trial_sol_pin = pin_sol_1;
       trial_sol_dur = us1_dur;
       trial_us_delay = us1_delay;
+    }
+    else if (cs_trial_types[trial_ix] == 2) {
+      trial_tone_freq = cs2_freq;
+      trial_tone_dur = cs2_dur;
+      trial_sol_pin = pin_sol_2;
+      trial_sol_dur = us2_dur;
+      trial_us_delay = us2_delay;
     }
 
     // Determine timestamps for events
