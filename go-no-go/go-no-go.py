@@ -75,6 +75,18 @@ py = 5
 px1 = 5
 py1 = 2
 
+# Serial codes
+code_end = 0;
+code_lick = 1;
+code_lick_form = 9;
+code_movement = 2;
+code_trial_start = 3;
+code_trial_signal = 4;
+code_cs_start = 5;
+code_us_start = 6;
+code_response = 7;
+code_next_trial = 8;
+
 # Should do following as byte in decimal form...
 code_vac_on = '1'
 code_vac_off = '2'
@@ -140,14 +152,12 @@ class InputManager(tk.Frame):
         self.var_cs0_num = tk.IntVar()
         self.var_cs1_num = tk.IntVar()
         self.var_cs2_num = tk.IntVar()
-
         self.var_iti_distro = tk.IntVar()
         self.var_mean_iti = tk.IntVar()
         self.var_min_iti = tk.IntVar()
         self.var_max_iti = tk.IntVar()
         self.var_pre_stim = tk.IntVar()
         self.var_post_stim = tk.IntVar()
-
         self.var_cs0_dur = tk.IntVar()
         self.var_cs0_freq = tk.IntVar()
         self.var_us0_delay = tk.IntVar()
@@ -160,7 +170,6 @@ class InputManager(tk.Frame):
         self.var_cs2_freq = tk.IntVar()
         self.var_us2_delay = tk.IntVar()
         self.var_us2_dur = tk.IntVar()
-
         self.var_trial_signal_offset = tk.IntVar()
         self.var_trial_signal_dur = tk.IntVar()
         self.var_trial_signal_freq = tk.IntVar()
@@ -169,13 +178,13 @@ class InputManager(tk.Frame):
         self.var_timeout_dur = tk.IntVar()
         self.var_consumption_dur = tk.IntVar()
         self.var_vac_dur = tk.IntVar()
-
         self.var_image_all = tk.IntVar()
         self.var_image_ttl_dur = tk.IntVar()
         self.var_track_period = tk.IntVar()
-
         self.var_verbose = tk.BooleanVar()
         self.var_print_arduino = tk.BooleanVar()
+        self.var_suppress_print_lick_form = tk.BooleanVar()
+        self.var_suppress_print_movement = tk.BooleanVar()
 
         # Default variable values
         self.var_session_type.set(0)
@@ -225,9 +234,6 @@ class InputManager(tk.Frame):
         frame_setup_col0.grid(row=0, column=0, sticky='we')
         frame_setup_col1.grid(row=0, column=1, sticky='we')
         frame_setup_col2.grid(row=0, column=2, sticky='we')
-        # frame_setup.grid_columnconfigure(0, weight=1)
-        # frame_setup.grid_columnconfigure(1, weight=1)
-        # frame_setup.grid_columnconfigure(2, weight=5)
 
         ### Session frame
         frame_params = tk.Frame(frame_setup_col0)
@@ -301,6 +307,55 @@ class InputManager(tk.Frame):
 
         # Add GUI components
 
+        ## frame_params
+        ## Session parameters
+
+        ### frame_session_type
+        ### UI for choosing session type, ie, classical conditining vs go/no go.
+        self.radio_conditioning = tk.Radiobutton(frame_session_type, text='Classical conditioning', variable=self.var_session_type, value=0, command=self.update_param_preview)
+        self.radio_gonogo = tk.Radiobutton(frame_session_type, text='Go/no go', variable=self.var_session_type, value=1, command=self.update_param_preview)
+        self.radio_conditioning.grid(row=0, column=0, sticky='w')
+        self.radio_gonogo.grid(row=1, column=0, sticky='w')
+
+        ### frame_session
+        ### UI for session.
+        self.entry_pre_session = tk.Entry(frame_session, width=entry_width)
+        self.entry_post_session = tk.Entry(frame_session, width=entry_width)
+        self.entry_cs0_num = tk.Entry(frame_session, width=entry_width)
+        self.entry_cs1_num = tk.Entry(frame_session, width=entry_width)
+        self.entry_cs2_num = tk.Entry(frame_session, width=entry_width)
+        tk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
+        tk.Label(frame_session, text='Number of CS1: ', anchor='e').grid(row=3, column=0, sticky='e')
+        tk.Label(frame_session, text='Number of CS2: ', anchor='e').grid(row=4, column=0, sticky='e')
+        self.entry_pre_session.grid(row=0, column=1, sticky='w')
+        self.entry_post_session.grid(row=1, column=1, sticky='w')
+        self.entry_cs0_num.grid(row=2, column=1, sticky='w')
+        self.entry_cs1_num.grid(row=3, column=1, sticky='w')
+        self.entry_cs2_num.grid(row=4, column=1, sticky='w')
+        
+
+        ### frame_trial_params
+        ### UI for session parameters.
+        self.button_params = tk.Button(frame_trial_params, text='Parameters', command=self.set_params)
+        self.text_params = tk.Text(frame_trial_params, width=50, height=10, font=("Arial", 8))
+        self.button_params.grid(row=0, column=0, sticky='we')
+        self.text_params.grid(row=1, column=0, sticky='we')
+        # self.text_params['state'] = 'disabled'
+
+        ### frame_misc
+        ### UI for other things.
+        self.entry_image_ttl_dur = tk.Entry(frame_misc, width=entry_width)
+        self.check_image_all = tk.Checkbutton(frame_misc, variable=self.var_image_all)
+        self.entry_track_period = tk.Entry(frame_misc, width=entry_width)
+        tk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
+        self.check_image_all.grid(row=0, column=1, sticky='w')
+        self.entry_image_ttl_dur.grid(row=1, column=1, sticky='w')
+        self.entry_track_period.grid(row=2, column=1, sticky='w')
+
         ## Camera preview
         cam_x = 1280
         cam_y = 1024
@@ -344,63 +399,14 @@ class InputManager(tk.Frame):
 
         ## frame_debug
         ## UI for debugging options.
-        self.check_verbose = tk.Checkbutton(frame_debug, variable=self.var_verbose)
-        self.check_print_arduino = tk.Checkbutton(frame_debug, variable=self.var_print_arduino)
-        tk.Label(frame_debug, text='Verbose: ', anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_debug, text='Print Arduino serial: ', anchor='e').grid(row=1, column=0, sticky='e')
-        self.check_verbose.grid(row=0, column=1, sticky='w')
-        self.check_print_arduino.grid(row=1, column=1, sticky='w')
-
-        ## frame_params
-        ## Session parameters
-
-        ### frame_session_type
-        ### UI for choosing session type, ie, classical conditining vs go/no go.
-        self.radio_conditioning = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=0, command=self.update_param_preview)
-        self.radio_gonogo = tk.Radiobutton(frame_session_type, variable=self.var_session_type, value=1, command=self.update_param_preview)
-        tk.Label(frame_session_type, text='Classical conditioning', anchor='w').grid(row=0, column=1, sticky='w')
-        tk.Label(frame_session_type, text='Go/no go', anchor='w').grid(row=1, column=1, sticky='w')
-        self.radio_conditioning.grid(row=0, column=0, sticky='w')
-        self.radio_gonogo.grid(row=1, column=0, sticky='w')
-
-        ### frame_session
-        ### UI for session.
-        self.entry_pre_session = tk.Entry(frame_session, width=entry_width)
-        self.entry_post_session = tk.Entry(frame_session, width=entry_width)
-        self.entry_cs0_num = tk.Entry(frame_session, width=entry_width)
-        self.entry_cs1_num = tk.Entry(frame_session, width=entry_width)
-        self.entry_cs2_num = tk.Entry(frame_session, width=entry_width)
-        tk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
-        tk.Label(frame_session, text='Number of CS1: ', anchor='e').grid(row=3, column=0, sticky='e')
-        tk.Label(frame_session, text='Number of CS2: ', anchor='e').grid(row=4, column=0, sticky='e')
-        self.entry_pre_session.grid(row=0, column=1, sticky='w')
-        self.entry_post_session.grid(row=1, column=1, sticky='w')
-        self.entry_cs0_num.grid(row=2, column=1, sticky='w')
-        self.entry_cs1_num.grid(row=3, column=1, sticky='w')
-        self.entry_cs2_num.grid(row=4, column=1, sticky='w')
-        
-
-        ### frame_trial_params
-        ### UI for session parameters.
-        self.button_params = tk.Button(frame_trial_params, text='Parameters', command=self.set_params)
-        self.text_params = tk.Text(frame_trial_params, width=50, height=10, font=("Arial", 8))
-        self.button_params.grid(row=0, column=0, sticky='we')
-        self.text_params.grid(row=1, column=0, sticky='we')
-        # self.text_params['state'] = 'disabled'
-
-        ### frame_misc
-        ### UI for other things.
-        self.entry_image_ttl_dur = tk.Entry(frame_misc, width=entry_width)
-        self.check_image_all = tk.Checkbutton(frame_misc, variable=self.var_image_all)
-        self.entry_track_period = tk.Entry(frame_misc, width=entry_width)
-        tk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
-        self.check_image_all.grid(row=0, column=1, sticky='w')
-        self.entry_image_ttl_dur.grid(row=1, column=1, sticky='w')
-        self.entry_track_period.grid(row=2, column=1, sticky='w')
+        self.check_verbose = tk.Checkbutton(frame_debug, text='Verbose', variable=self.var_verbose)
+        self.check_print_arduino = tk.Checkbutton(frame_debug, text='Print Arduino serial', variable=self.var_print_arduino)
+        self.check_suppress_print_lick_form = tk.Checkbutton(frame_debug, text='Suppress lick output', variable=self.var_suppress_print_lick_form)
+        self.check_suppress_print_movement = tk.Checkbutton(frame_debug, text='Suppress movement output', variable=self.var_suppress_print_movement)
+        self.check_verbose.grid(row=0, column=0, sticky='w')
+        self.check_print_arduino.grid(row=1, column=0, sticky='w')
+        self.check_suppress_print_lick_form.grid(row=2, column=0, sticky='w')
+        self.check_suppress_print_movement.grid(row=3, column=0, sticky='w')
 
         ## frame_notes
         ## UI for note taking.
@@ -525,6 +531,9 @@ class InputManager(tk.Frame):
         ]
         self.obj_to_disable_at_start = [
             self.button_close_port,
+            self.check_print_arduino,
+            self.check_suppress_print_lick_form,
+            self.check_suppress_print_movement,
             self.button_find_file,
             self.button_slack,
             self.button_start,
@@ -568,23 +577,7 @@ class InputManager(tk.Frame):
         Enable and disable components based on events to prevent bad stuff.
         '''
 
-        if option == 'fixed':
-            for obj in self.obj_not_fixed_iti:
-                obj['state'] = 'disabled'
-        if option == 'not_fixed':
-            for obj in self.obj_not_fixed_iti:
-                obj['state'] = 'normal'
-        elif option == 'pavlov':
-            for obj in self.obj_gonogo:
-                obj['state'] = 'disabled'
-            for obj in self.obj_pavlov:
-                obj['state'] = 'normal'
-        elif option == 'gonogo':
-            for obj in self.obj_pavlov:
-                obj['state'] = 'disabled'
-            for obj in self.obj_gonogo:
-                obj['state'] = 'normal'
-        elif option == 'open':
+        if option == 'open':
             for i, obj in enumerate(self.obj_to_disable_at_open):
                 # Determine current state of object                
                 self.obj_enabled_at_open[i] = False if obj['state'] == 'disabled' else True
@@ -955,7 +948,7 @@ class InputManager(tk.Frame):
             self.ser.open()
         except serial.SerialException as err:
             # Error during serial.open()
-            err_msg = err.args[0] if is_py2 else err.message
+            err_msg = err.args[0]
             tkMessageBox.showerror('Serial error', err_msg)
             print('Serial error: ' + err_msg)
             self.close_serial()
@@ -1116,6 +1109,7 @@ class InputManager(tk.Frame):
         n_movement_frames = 2 * (n_trials * self.parameters['mean_iti'] + 
             self.parameters['pre_session'] + self.parameters['post_session']
             ) / self.parameters['track_period']
+        chunk_size = (2, 1)
 
         # self.grp_cam = self.data_file.create_group('cam')
         # self.dset_ts = self.grp_cam.create_dataset('timestamps', dtype=float,
@@ -1130,41 +1124,38 @@ class InputManager(tk.Frame):
 
         self.grp_behav = self.data_file.create_group('behavior')
         self.grp_behav.create_dataset(name='lick', dtype='uint32',
-            shape=(2, n_movement_frames), chunks=(2, 1))
+            shape=(2, n_movement_frames), chunks=chunk_size)
         self.grp_behav.create_dataset(name='lick_form', dtype='uint32',
-            shape=(2, n_movement_frames), chunks=(2, 1))
+            shape=(2, n_movement_frames), chunks=chunk_size)
         self.grp_behav.create_dataset(name='movement', dtype='int32',
-            shape=(2, n_movement_frames), chunks=(2, 1))
+            shape=(2, n_movement_frames), chunks=chunk_size)
         self.grp_behav.create_dataset(name='trial_start', dtype='uint32',
-            shape=(2, n_trials), chunks=(2, 1))
+            shape=(2, n_trials), chunks=chunk_size)
         self.grp_behav.create_dataset(name='trial_signal', dtype='uint32',
-            shape=(2, n_trials), chunks=(2, 1))
+            shape=(2, n_trials), chunks=chunk_size)
         self.grp_behav.create_dataset(name='cs', dtype='uint32',
-            shape=(2, n_trials), chunks=(2, 1))
+            shape=(2, n_trials), chunks=chunk_size)
         self.grp_behav.create_dataset(name='us', dtype='uint32',
-            shape=(2, n_trials), chunks=(2, 1))
+            shape=(2, n_trials), chunks=chunk_size)
         self.grp_behav.create_dataset(name='response', dtype='uint32',
-            shape=(2, n_trials), chunks=(2, 1))
+            shape=(2, n_trials), chunks=chunk_size)
 
         # Store session parameters into behavior group
         for key, value in self.parameters.iteritems():
             self.grp_behav.attrs[key] = value
 
-        # if self.print_arduino.get():
-        #     while self.ser.in_waiting:
-        #         sys.stdout.write(arduino_head + self.ser.readline())
-        # else:
-        #     self.ser.flushInput()
-
         # Setup multithreading for serial scan and recording
-        # for q in [self.q_serial, self.q_to_thread_rec, self.q_from_thread_rec]:
         for q in [self.q_serial, ]:
             with q.mutex:
                 q.queue.clear()
 
+        suppress = [
+            code_lick_form if self.var_suppress_print_lick_form.get() else None,
+            code_movement if self.var_suppress_print_movement.get() else None
+        ]
         thread_scan = threading.Thread(
             target=scan_serial,
-            args=(self.q_serial, self.ser, self.var_print_arduino.get())
+            args=(self.q_serial, self.ser, self.var_print_arduino.get(), suppress)
         )
 
         # Reset things
@@ -1188,17 +1179,7 @@ class InputManager(tk.Frame):
         # Rate to update GUI; should be faster than incoming data
         refresh_rate = 10
 
-        # Codes
-        code_end = 0;
-        code_lick = 1;
-        code_lick_form = 9;
-        code_movement = 2;
-        code_trial_start = 3;
-        code_trial_signal = 4;
-        code_cs_start = 5;
-        code_us_start = 6;
-        code_response = 7;
-        code_next_trial = 8;
+        # Code-event dictionary
         event = {
             code_lick: 'lick',
             code_lick_form: 'lick_form',
@@ -1306,27 +1287,26 @@ def slack_msg(slack_recipient, msg, test=False, verbose=False):
 
 
 # def scan_serial(q_serial, q_to_rec_thread, ser, print_arduino=False):
-def scan_serial(q_serial, ser, print_arduino=False):
+def scan_serial(q_serial, ser, print_arduino=False, suppress=[]):
     '''Check serial for data
     Continually check serial connection for data sent from Arduino. Send data 
     through Queue to communicate with main GUI. Stop when `code_end` is 
     received from serial.
     '''
 
-    code_end = 0
-
     while 1:
         input_arduino = ser.readline()
         if not input_arduino: continue
 
-        if print_arduino: sys.stdout.write(arduino_head + input_arduino)
-
         try:
-            input_split = map(int, input_arduino.split(','))
+            input_split = [int(x) for x in input_arduino.split(',')]
         except ValueError:
             # If not all comma-separated values are int castable
-            pass
+            if print_arduino: sys.stdout.write(arduino_head + input_arduino)
         else:
+            if print_arduino and input_split[0] not in suppress:
+                # Only print from serial if code is not in list of codes to suppress
+                sys.stdout.write(arduino_head + input_arduino)
             if input_arduino: q_serial.put(input_split)
             if input_split[0] == code_end:
                 # q_to_rec_thread.put(0)
