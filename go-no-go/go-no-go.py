@@ -14,6 +14,12 @@ Packages needed:
 - pyserial
 - slackclient
 
+
+TODO:
+- pulsing tone
+- trigger CS
+- CS names
+
 '''
 
 import sys
@@ -155,11 +161,6 @@ class InputManager(tk.Frame):
 
         # Variables
         self.var_session_type = tk.IntVar()
-        self.var_pre_session = tk.IntVar()
-        self.var_post_session = tk.IntVar()
-        self.var_cs0_num = tk.IntVar()
-        self.var_cs1_num = tk.IntVar()
-        self.var_cs2_num = tk.IntVar()
         self.var_iti_distro = tk.IntVar()
         self.var_mean_iti = tk.IntVar()
         self.var_min_iti = tk.IntVar()
@@ -196,15 +197,10 @@ class InputManager(tk.Frame):
 
         # Default variable values
         self.var_session_type.set(0)
-        self.var_pre_session.set(0)
-        self.var_post_session.set(0)
-        self.var_cs0_num.set(15)
-        self.var_cs1_num.set(15)
-        self.var_cs2_num.set(0)
-        self.var_iti_distro.set(0)
+        self.var_iti_distro.set(1)
         self.var_mean_iti.set(60000)
-        self.var_min_iti.set(25000)
-        self.var_max_iti.set(180000)
+        self.var_min_iti.set(40000)
+        self.var_max_iti.set(80000)
         self.var_pre_stim.set(7000)
         self.var_post_stim.set(13000)
         self.var_cs0_dur.set(2000)
@@ -220,7 +216,7 @@ class InputManager(tk.Frame):
         self.var_us2_delay.set(3000)
         self.var_us2_dur.set(50)
         self.var_consumption_dur.set(8000)
-        self.var_vac_dur.set(50)
+        self.var_vac_dur.set(100)
         self.var_trial_signal_offset.set(2000)
         self.var_trial_signal_dur.set(1000)
         self.var_trial_signal_freq.set(0)
@@ -552,6 +548,7 @@ class InputManager(tk.Frame):
             self.check_print_arduino,
             self.check_suppress_print_lick_form,
             self.check_suppress_print_movement,
+            self.entry_file,
             self.button_find_file,
             self.button_slack,
             self.button_start,
@@ -574,11 +571,11 @@ class InputManager(tk.Frame):
         self.obj_enabled_at_open = [False] * len(self.obj_to_disable_at_open)
 
         # Default values
-        self.entry_pre_session.insert(0, self.var_pre_session.get())
-        self.entry_post_session.insert(0, self.var_post_session.get())
-        self.entry_cs0_num.insert(0, self.var_cs0_num.get())
-        self.entry_cs1_num.insert(0, self.var_cs1_num.get())
-        self.entry_cs2_num.insert(0, self.var_cs2_num.get())
+        self.entry_pre_session.insert(0, 60000)
+        self.entry_post_session.insert(0, 60000)
+        self.entry_cs0_num.insert(0, 20)
+        self.entry_cs1_num.insert(0, 20)
+        self.entry_cs2_num.insert(0, 0)
         self.entry_image_ttl_dur.insert(0, self.var_image_ttl_dur.get())
         self.entry_track_period.insert(0, self.var_track_period.get())
 
@@ -1017,11 +1014,6 @@ class InputManager(tk.Frame):
         self.parameters = collections.OrderedDict()   # Clear self.parameters (maybe not necessary)
 
         self.parameters['session_type'] = self.var_session_type.get()
-        # self.parameters['pre_session'] = self.var_pre_session.get()
-        # self.parameters['post_session'] = self.var_post_session.get()
-        # self.parameters['cs0_num'] = self.var_cs0_num.get()
-        # self.parameters['cs1_num'] = self.var_cs1_num.get()
-        # self.parameters['cs2_num'] = self.var_cs2_num.get()
         self.parameters['pre_session'] = int(self.entry_pre_session.get())
         self.parameters['post_session'] = int(self.entry_post_session.get())
         self.parameters['cs0_num'] = int(self.entry_cs0_num.get())
@@ -1144,28 +1136,28 @@ class InputManager(tk.Frame):
             filename = 'data/data-' + now.strftime('%y%m%d-%H%M%S') + '.h5'
             self.data_file = h5py.File(filename, 'x')
 
-        # Create HDF5 file
+        # Create group for experiment
+        # Append to existing file (if applicable). If group already exists, append number to name.
+        date = str(datetime.now().date())
+        index = 0
+        file_index = ''
+        while True:
+            try:
+                self.grp_exp = self.data_file.create_group(date + file_index)
+            except (RuntimeError, ValueError):
+                index += 1
+                file_index = '-' + str(index)
+            else:
+                break
+
+        # Initialize datasets
         n_trials = self.parameters['cs0_num'] + self.parameters['cs1_num'] + self.parameters['cs2_num']
         n_movement_frames = 2 * (n_trials * self.parameters['mean_iti'] + 
             self.parameters['pre_session'] + self.parameters['post_session']
             ) / self.parameters['track_period']
         chunk_size = (2, 1)
 
-        # self.grp_cam = self.data_file.create_group('cam')
-        # self.dset_ts = self.grp_cam.create_dataset('timestamps', dtype=float,
-        #     shape=(int(nframes * 1.1), ), chunks=(1, ))
-        # self.dset_cam = self.grp_cam.create_dataset('frames', dtype='uint8',
-        #     shape=(int(nframes * 1.1), dy, dx), chunks=(1, dy, dx))
-        # self.grp_cam.attrs['fps'] = fps
-        # self.grp_cam.attrs['exposure'] = exposure_time
-        # self.grp_cam.attrs['gain'] = self.var_gain.get()
-        # self.grp_cam.attrs['vsub'] = self.var_vsub.get()
-        # self.grp_cam.attrs['hsub'] = self.var_hsub.get()
-
-        date = str(datetime.now().date())
-        self.grp_exp = self.data_file.create_group(date)
-
-        self.grp_behav = self.data_file.create_group('{}/behavior'.format(date))
+        self.grp_behav = self.grp_exp.create_group('behavior')
         self.grp_behav.create_dataset(name='lick', dtype='uint32',
             shape=(2, n_movement_frames), chunks=chunk_size)
         self.grp_behav.create_dataset(name='lick_form', dtype='uint32',
@@ -1182,6 +1174,17 @@ class InputManager(tk.Frame):
             shape=(2, n_trials), chunks=chunk_size)
         self.grp_behav.create_dataset(name='response', dtype='uint32',
             shape=(2, n_trials), chunks=chunk_size)
+
+        # self.grp_cam = self.data_file.create_group('cam')
+        # self.dset_ts = self.grp_cam.create_dataset('timestamps', dtype=float,
+        #     shape=(int(nframes * 1.1), ), chunks=(1, ))
+        # self.dset_cam = self.grp_cam.create_dataset('frames', dtype='uint8',
+        #     shape=(int(nframes * 1.1), dy, dx), chunks=(1, dy, dx))
+        # self.grp_cam.attrs['fps'] = fps
+        # self.grp_cam.attrs['exposure'] = exposure_time
+        # self.grp_cam.attrs['gain'] = self.var_gain.get()
+        # self.grp_cam.attrs['vsub'] = self.var_vsub.get()
+        # self.grp_cam.attrs['hsub'] = self.var_hsub.get()
 
         # Store session parameters into behavior group
         for key, value in self.parameters.iteritems():
@@ -1209,7 +1212,7 @@ class InputManager(tk.Frame):
         thread_scan.start()
         start_time = datetime.now().time()
         print('Session started at {}'.format(start_time))
-        self.grp_exp.attrs['start_time'] = start_time
+        self.grp_exp.attrs['start_time'] = str(start_time)
 
         # Update GUI
         self.update_session()
@@ -1276,12 +1279,11 @@ class InputManager(tk.Frame):
         self.close_serial()
         # self.cam_close()
 
-        print('Writing behavioral data')
-        self.grp_exp.attrs['end_time'] = end_time
+        print('Writing behavioral data into HDF5 group {}'format(self.gr_exp.name))
         self.grp_exp.attrs['subject'] = self.entry_subject.get()
         self.grp_exp.attrs['weight'] = self.entry_weight.get()
-        self.grp_exp.attrs['end_time'] = end_time
-        self.grp_exp.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
+        self.grp_behav.attrs['end_time'] = end_time
+        self.grp_behav.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
         self.grp_behav.attrs['arduino_end'] = arduino_end
         for ev in events:
             self.grp_behav[ev].resize((2, self.counter[ev]))
@@ -1357,7 +1359,7 @@ def scan_serial(q_serial, ser, print_arduino=False, suppress=[]):
 def main():
     # GUI
     root = tk.Tk()
-    root.wm_title("Go/no go")
+    root.wm_title('Go/no go & classical conditining')
     # default_font = tkFont.nametofont('TkDefaultFont')
     # default_font.configure(family='Arial')
     # root.option_add('*Font', default_font)
