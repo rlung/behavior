@@ -989,9 +989,10 @@ class InputManager(tk.Frame):
             self.ser.open()
         except serial.SerialException as err:
             # Error during serial.open()
-            err_msg = err.args[0]
+            pdb.set_trace()
+            err_msg = err.args                                           # Could be done bettter...
             tkMessageBox.showerror('Serial error', err_msg)
-            print('Serial error: ' + err_msg)
+            print('Serial error: {}'.format(err_msg))
             self.close_serial()
             self.gui_util('close')
             return
@@ -1279,7 +1280,7 @@ class InputManager(tk.Frame):
         self.close_serial()
         # self.cam_close()
 
-        print('Writing behavioral data into HDF5 group {}'format(self.gr_exp.name))
+        print('Writing behavioral data into HDF5 group {}'.format(self.gr_exp.name))
         self.grp_exp.attrs['subject'] = self.entry_subject.get()
         self.grp_exp.attrs['weight'] = self.entry_weight.get()
         self.grp_behav.attrs['end_time'] = end_time
