@@ -36,6 +36,7 @@ if is_py2:
     from Queue import Queue
 else:
     import tkinter as tk
+    import tkinter.ttk as ttk
     import tkinter.font as tkFont
     import tkinter.messagebox as tkMessageBox
     import tkinter.filedialog as tkFileDialog
@@ -74,20 +75,27 @@ else:
 # Header to print with Arduino outputs
 arduino_head = '  [a]: '
 
-entry_width = 10
+# Styling
+opt_labelframe = {'relief': 'solid'}
+
 opts_entry = {
-    'width': 10,
-    'justify': 'right',
-    'bg': 'white',
-    'borderwidth': 0.5,
+    # 'bg': 'white',
+    # 'borderwidth': 0.5,
+    # 'relief': 'flat',
 }
-ew = 10  # Width of Entry UI
-pX = 50
-pY = 15
-px = 15
-py = 5
-px1 = 5
-py1 = 2
+opts_entry10 = dict(opts_entry, **{'width': 10, 'justify': 'right'})
+
+opts_button = {}
+opts_button_grid = {'padx': 2}
+
+opts_radio = {}
+opts_check = {}
+
+opts_frame_sep = {'padx': 50, 'pady': 15, }
+opts_frame0 = {'pady': 15, }
+opts_frame1 = {'padx': 15, 'pady': 5, }
+opts_frame2 = {'padx': 5, }
+
 
 # Serial codes
 code_end = 0;
@@ -114,6 +122,9 @@ code_sol1_trig = '9'
 code_sol2_on = ':'
 code_sol2_off = ';'
 code_sol2_trig = '<'
+code_cs0 = '='
+code_cs1 = '>'
+code_cs2 = '?'
 
 # Events to record
 events = [
@@ -123,10 +134,10 @@ events = [
 ]
 
 
-class InputManager(tk.Frame):
+class InputManager(ttk.Frame):
 
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
+        ttk.Frame.__init__(self, parent)
 
         # GUI layout
         # parent
@@ -230,88 +241,93 @@ class InputManager(tk.Frame):
         # Lay out GUI
 
         ## Setup frame
-        frame_setup = tk.Frame(parent)
-        frame_setup.grid(row=0, column=0, pady=pY)
-        frame_setup_col0 = tk.Frame(frame_setup)
-        frame_setup_col1 = tk.Frame(frame_setup)
-        frame_setup_col2 = tk.Frame(frame_setup)
+        frame_setup = ttk.Frame(parent)
+        frame_setup.grid(row=0, column=0, **opts_frame0)
+        frame_setup_col0 = ttk.Frame(frame_setup)
+        frame_setup_col1 = ttk.Frame(frame_setup)
+        frame_setup_col2 = ttk.Frame(frame_setup)
         frame_setup_col0.grid(row=0, column=0, sticky='we')
         frame_setup_col1.grid(row=0, column=1, sticky='we')
         frame_setup_col2.grid(row=0, column=2, sticky='we')
 
         ### Session frame
-        frame_params = tk.Frame(frame_setup_col0)
-        frame_params.grid(row=0, column=0, rowspan=3, padx=px, pady=py)
+        frame_params = ttk.Frame(frame_setup_col0)
+        frame_params.grid(row=0, column=0, rowspan=3, **opts_frame1)
         frame_params.columnconfigure(0, weight=1)
 
-        frame_session_type = tk.Frame(frame_params)
-        frame_session = tk.Frame(frame_params)
-        frame_trial_params = tk.Frame(frame_params)
-        frame_misc = tk.Frame(frame_params)
-        frame_session_type.grid(row=0, column=0, padx=px, pady=py)
-        frame_session.grid(row=1, column=0, sticky='e', padx=px, pady=py)
-        frame_trial_params.grid(row=2, column=0, sticky='we', padx=px, pady=py)
-        frame_misc.grid(row=3, column=0, sticky='e', padx=px, pady=py)
+        frame_session_type = ttk.Frame(frame_params)
+        frame_session = ttk.Frame(frame_params)
+        frame_trial_params = ttk.Frame(frame_params)
+        frame_misc = ttk.Frame(frame_params)
+        frame_session_type.grid(row=0, column=0, **opts_frame1)
+        frame_session.grid(row=1, column=0, sticky='e', **opts_frame1)
+        frame_trial_params.grid(row=2, column=0, sticky='we', **opts_frame1)
+        frame_misc.grid(row=3, column=0, sticky='e', **opts_frame1)
         frame_session_type.columnconfigure(0, weight=1)
         frame_trial_params.columnconfigure(0, weight=1)
 
         ### Camera frame
-        frame_cam = tk.Frame(frame_setup_col1)
-        frame_cam.grid(row=0, column=0, padx=px, pady=py)
+        frame_cam = ttk.Frame(frame_setup_col1)
+        frame_cam.grid(row=0, column=0, **opts_frame1)
 
         ### Arduino frame
-        frame_arduino = tk.LabelFrame(frame_setup_col1, text='Arduino')
-        frame_arduino.grid(row=1, column=0, padx=px, pady=py, sticky='we')
-        frame_arduino1 = tk.Frame(frame_arduino)
-        frame_arduino2 = tk.Frame(frame_arduino)
-        frame_arduino1.grid(row=0, column=0, sticky='we', padx=px, pady=py)
-        frame_arduino2.grid(row=1, column=0, sticky='we', padx=px, pady=py)
+        frame_arduino = ttk.LabelFrame(frame_setup_col1, text='Arduino', **opt_labelframe)
+        frame_arduino.grid(row=1, column=0, **opts_frame1, sticky='we')
+        frame_arduino1 = ttk.Frame(frame_arduino)
+        frame_arduino2 = ttk.Frame(frame_arduino)
+        frame_arduino1.grid(row=0, column=0, sticky='we', **opts_frame1)
+        frame_arduino2.grid(row=1, column=0, sticky='we', **opts_frame1)
         frame_arduino2.grid_columnconfigure(0, weight=1)
         frame_arduino2.grid_columnconfigure(1, weight=1)
         frame_arduino.grid_columnconfigure(0, weight=1)
 
         ### Debug frame
-        frame_debug = tk.LabelFrame(frame_setup_col1, text='Debug')
-        frame_debug.grid(row=2, column=0, padx=px, pady=py, sticky='we')
+        frame_debug = ttk.LabelFrame(frame_setup_col1, text='Debug', **opt_labelframe)
+        frame_debug.grid(row=2, column=0, sticky='we', **opts_frame1)
         frame_debug.grid_columnconfigure(0, weight=1)
 
         ### Notes frame
-        frame_info = tk.Frame(frame_setup_col2)
-        frame_info.grid(row=0, column=0, sticky='we', padx=px, pady=py)
+        frame_info = ttk.Frame(frame_setup_col2)
+        frame_info.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_info.grid_columnconfigure(0, weight=1)
 
         ### Saved file frame
-        frame_file = tk.Frame(frame_setup_col2)
-        frame_file.grid(row=1, column=0, sticky='we', padx=px, pady=py)
+        frame_file = ttk.Frame(frame_setup_col2)
+        frame_file.grid(row=1, column=0, sticky='we', **opts_frame1)
         frame_file.grid_columnconfigure(0, weight=3)
         frame_file.grid_columnconfigure(1, weight=1)
 
         ### Slack frame
-        frame_slack = tk.Frame(frame_setup_col2)
-        frame_slack.grid(row=2, column=0, sticky='we', padx=px, pady=py)
+        frame_slack = ttk.Frame(frame_setup_col2)
+        frame_slack.grid(row=2, column=0, sticky='we', **opts_frame1)
         frame_slack.grid_columnconfigure(0, weight=3)
         frame_slack.grid_columnconfigure(1, weight=1)
 
         ### Start-stop frame
-        frame_start = tk.Frame(frame_setup_col2)
-        frame_start.grid(row=3, column=0, sticky='we', padx=px, pady=py)
+        frame_start = ttk.Frame(frame_setup_col2)
+        frame_start.grid(row=3, column=0, sticky='we', **opts_frame1)
         frame_start.grid_columnconfigure(0, weight=1)
         frame_start.grid_columnconfigure(1, weight=1)
 
         ## Separator frame
         frame_sep = tk.Frame(parent, height=1, bg='gray')
-        frame_sep.grid(row=1, column=0, sticky='we', padx=pX, pady=pY)
+        frame_sep.grid(row=1, column=0, sticky='we', **opts_frame_sep)
 
         ## Monitor frame
-        frame_monitor = tk.Frame(parent)
-        frame_monitor.grid(row=2, column=0, pady=pY)
-        frame_setup_col0 = tk.Frame(frame_monitor)
+        frame_monitor = ttk.Frame(parent)
+        frame_monitor.grid(row=2, column=0, **opts_frame_sep)
+        frame_setup_col0 = ttk.Frame(frame_monitor)
         frame_setup_col0.grid(row=0, column=0, sticky='we')
 
         ### Solenoid frame
-        frame_sol = tk.Frame(frame_monitor)
-        frame_sol.grid(row=0, column=0, sticky='we', padx=px, pady=py)
-        frame_debug.grid_columnconfigure(0, weight=1)  # Fills into frame
+        frame_sol = ttk.Frame(frame_monitor)
+        frame_sol.grid(row=0, column=0, sticky='we', **opts_frame1)
+        frame_sol.grid_columnconfigure(0, weight=1)  # Fills into frame
+
+        ### Cue frame
+        frame_cue = ttk.Frame(frame_monitor)
+        frame_cue.grid(row=0, column=1, sticky='we', **opts_frame1)
+        frame_cue.grid_columnconfigure(0, weight=1)
 
         # Add GUI components
 
@@ -320,18 +336,18 @@ class InputManager(tk.Frame):
 
         ### frame_session_type
         ### UI for choosing session type, ie, classical conditining vs go/no go.
-        self.radio_conditioning = tk.Radiobutton(frame_session_type, text='Classical conditioning', variable=self.var_session_type, value=0, command=self.update_param_preview)
-        self.radio_gonogo = tk.Radiobutton(frame_session_type, text='Go/no go', variable=self.var_session_type, value=1, command=self.update_param_preview)
+        self.radio_conditioning = ttk.Radiobutton(frame_session_type, text='Classical conditioning', variable=self.var_session_type, value=0, command=self.update_param_preview)
+        self.radio_gonogo = ttk.Radiobutton(frame_session_type, text='Go/no go', variable=self.var_session_type, value=1, command=self.update_param_preview)
         self.radio_conditioning.grid(row=0, column=0, sticky='w')
         self.radio_gonogo.grid(row=1, column=0, sticky='w')
 
         ### frame_session
         ### UI for session.
-        self.entry_pre_session = tk.Entry(frame_session, **opts_entry)
-        self.entry_post_session = tk.Entry(frame_session, **opts_entry)
-        self.entry_cs0_num = tk.Entry(frame_session, **opts_entry)
-        self.entry_cs1_num = tk.Entry(frame_session, **opts_entry)
-        self.entry_cs2_num = tk.Entry(frame_session, **opts_entry)
+        self.entry_pre_session = ttk.Entry(frame_session, **opts_entry10)
+        self.entry_post_session = ttk.Entry(frame_session, **opts_entry10)
+        self.entry_cs0_num = ttk.Entry(frame_session, **opts_entry10)
+        self.entry_cs1_num = ttk.Entry(frame_session, **opts_entry10)
+        self.entry_cs2_num = ttk.Entry(frame_session, **opts_entry10)
         tk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -346,17 +362,17 @@ class InputManager(tk.Frame):
 
         ### frame_trial_params
         ### UI for session parameters.
-        self.button_params = tk.Button(frame_trial_params, text='Parameters', command=self.set_params)
+        self.button_params = ttk.Button(frame_trial_params, text='Parameters', command=self.set_params, **opts_button)
         self.text_params = tk.Text(frame_trial_params, width=50, height=10, font=("Arial", 8))
-        self.button_params.grid(row=0, column=0, sticky='we')
+        self.button_params.grid(row=0, column=0, sticky='we', **opts_button_grid)
         self.text_params.grid(row=1, column=0, sticky='we')
         # self.text_params['state'] = 'disabled'
 
         ### frame_misc
         ### UI for other things.
-        self.check_image_all = tk.Checkbutton(frame_misc, variable=self.var_image_all)
-        self.entry_image_ttl_dur = tk.Entry(frame_misc, **opts_entry)
-        self.entry_track_period = tk.Entry(frame_misc, **opts_entry)
+        self.check_image_all = ttk.Checkbutton(frame_misc, variable=self.var_image_all, **opts_check)
+        self.entry_image_ttl_dur = ttk.Entry(frame_misc, **opts_entry10)
+        self.entry_track_period = ttk.Entry(frame_misc, **opts_entry10)
         tk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -387,18 +403,18 @@ class InputManager(tk.Frame):
         ## frame_arduino
         ## Arduino setup
         self.port_var = tk.StringVar()
-        self.entry_serial_status = tk.Entry(frame_arduino1)
-        self.option_ports = tk.OptionMenu(frame_arduino1, self.port_var, [])
-        self.button_update_ports = tk.Button(frame_arduino1, text='u', command=self.update_ports)
-        self.button_open_port = tk.Button(frame_arduino2, text='Open', command=self.open_serial)
-        self.button_close_port = tk.Button(frame_arduino2, text='Close', command=self.close_serial)
+        self.entry_serial_status = ttk.Entry(frame_arduino1, **opts_entry)
+        self.option_ports = ttk.OptionMenu(frame_arduino1, self.port_var, [])
+        self.button_update_ports = ttk.Button(frame_arduino1, text='u', command=self.update_ports, **opts_button)
+        self.button_open_port = ttk.Button(frame_arduino2, text='Open', command=self.open_serial, **opts_button)
+        self.button_close_port = ttk.Button(frame_arduino2, text='Close', command=self.close_serial, **opts_button)
         tk.Label(frame_arduino1, text='Port: ').grid(row=0, column=0, sticky='e')
         tk.Label(frame_arduino1, text='State: ').grid(row=1, column=0, sticky='e')
-        self.option_ports.grid(row=0, column=1, sticky='we', padx=px1)
-        self.entry_serial_status.grid(row=1, column=1, sticky='w', padx=px1)
-        self.button_update_ports.grid(row=0, column=2, pady=py)
-        self.button_open_port.grid(row=0, column=0, pady=py, sticky='we')
-        self.button_close_port.grid(row=0, column=1, pady=py, sticky='we')
+        self.option_ports.grid(row=0, column=1, sticky='we', **opts_frame2)
+        self.entry_serial_status.grid(row=1, column=1, sticky='w', **opts_frame2)
+        self.button_update_ports.grid(row=0, column=2, **opts_button_grid)
+        self.button_open_port.grid(row=0, column=0, sticky='we', **opts_button_grid)
+        self.button_close_port.grid(row=0, column=1, sticky='we', **opts_button_grid)
 
         self.entry_serial_status.insert(0, 'Closed')
         self.entry_serial_status['state'] = 'normal'
@@ -407,10 +423,10 @@ class InputManager(tk.Frame):
 
         ## frame_debug
         ## UI for debugging options.
-        self.check_verbose = tk.Checkbutton(frame_debug, text='Verbose', variable=self.var_verbose)
-        self.check_print_arduino = tk.Checkbutton(frame_debug, text='Print Arduino serial', variable=self.var_print_arduino)
-        self.check_suppress_print_lick_form = tk.Checkbutton(frame_debug, text='Suppress lick output', variable=self.var_suppress_print_lick_form)
-        self.check_suppress_print_movement = tk.Checkbutton(frame_debug, text='Suppress movement output', variable=self.var_suppress_print_movement)
+        self.check_verbose = ttk.Checkbutton(frame_debug, text='Verbose', variable=self.var_verbose, **opts_check)
+        self.check_print_arduino = ttk.Checkbutton(frame_debug, text='Print Arduino serial', variable=self.var_print_arduino, **opts_check)
+        self.check_suppress_print_lick_form = ttk.Checkbutton(frame_debug, text='Suppress lick output', variable=self.var_suppress_print_lick_form, **opts_check)
+        self.check_suppress_print_movement = ttk.Checkbutton(frame_debug, text='Suppress movement output', variable=self.var_suppress_print_movement, **opts_check)
         self.check_verbose.grid(row=0, column=0, sticky='w')
         self.check_print_arduino.grid(row=1, column=0, sticky='w')
         self.check_suppress_print_lick_form.grid(row=2, column=0, sticky='w')
@@ -418,9 +434,9 @@ class InputManager(tk.Frame):
 
         ## frame_info
         ## UI for session info.
-        self.entry_subject = tk.Entry(frame_info)
-        self.entry_weight = tk.Entry(frame_info)
-        self.scrolled_notes = ScrolledText(frame_info, width=20, height=15)
+        self.entry_subject = ttk.Entry(frame_info, **opts_entry)
+        self.entry_weight = ttk.Entry(frame_info, **opts_entry)
+        self.scrolled_notes = ScrolledText(frame_info, width=20, height=15, relief='flat')
         tk.Label(frame_info, text="Subject: ").grid(row=0, column=0, sticky='e')
         tk.Label(frame_info, text="Weight: ").grid(row=1, column=0, sticky='e')
         tk.Label(frame_info, text="Notes: ").grid(row=2, column=0, columnspan=2, sticky='w')
@@ -430,11 +446,11 @@ class InputManager(tk.Frame):
 
         ## frame_file
         ## UI for saved file.
-        self.entry_file = tk.Entry(frame_file)
-        self.button_find_file = tk.Button(frame_file, text='...', command=self.get_save_file)
-        tk.Label(frame_file, text='File to save data:', anchor='w').grid(row=0, column=0, columnspan=4, sticky='w')
+        self.entry_file = ttk.Entry(frame_file, **opts_entry)
+        self.button_find_file = ttk.Button(frame_file, command=self.get_save_file, **opts_button)
+        tk.Label(frame_file, text='File to save data:', anchor='w').grid(row=0, column=0, columnspan=2, sticky='w')
         self.entry_file.grid(row=1, column=0, sticky='wens')
-        self.button_find_file.grid(row=1, column=1, sticky='e')
+        self.button_find_file.grid(row=1, column=1, sticky='e', **opts_button_grid)
 
         ### Add icon to folder
         icon_folder = ImageTk.PhotoImage(file='icon_folder.png')
@@ -443,11 +459,11 @@ class InputManager(tk.Frame):
 
         ## frame_slack
         ## UI for slack notifications.
-        self.entry_slack = tk.Entry(frame_slack)
-        self.button_slack = tk.Button(frame_slack, text='', command=lambda: slack_msg(self.entry_slack.get(), 'Test', test=True))
-        tk.Label(frame_slack, text="Slack address: ", anchor='w').grid(row=0, column=0, sticky='we')
+        self.entry_slack = ttk.Entry(frame_slack, **opts_entry)
+        self.button_slack = ttk.Button(frame_slack, command=lambda: slack_msg(self.entry_slack.get(), 'Test', test=True), **opts_button)
+        tk.Label(frame_slack, text="Slack address: ", anchor='w').grid(row=0, column=0, columnspan=2, sticky='w')
         self.entry_slack.grid(row=1, column=0, sticky='wens')
-        self.button_slack.grid(row=1, column=1, sticky='e')
+        self.button_slack.grid(row=1, column=1, sticky='e', **opts_button_grid)
 
         ### Add icon to folder
         icon_slack = ImageTk.PhotoImage(file='icon_slack.png')
@@ -458,44 +474,47 @@ class InputManager(tk.Frame):
         ## UI for starting and stopping session.
         self.var_stop = tk.BooleanVar()
         self.var_stop.set(False)
-        self.button_start = tk.Button(frame_start, text='Start', command=lambda: self.parent.after(0, self.start))
-        self.button_stop = tk.Button(frame_start, text='Stop', command=lambda: self.var_stop.set(True))
-        self.button_start.grid(row=0, column=0, sticky='we')
-        self.button_stop.grid(row=0, column=1, sticky='we')
+        self.button_start = ttk.Button(frame_start, text='Start', command=lambda: self.parent.after(0, self.start), **opts_button)
+        self.button_stop = ttk.Button(frame_start, text='Stop', command=lambda: self.var_stop.set(True), **opts_button)
+        self.button_start.grid(row=0, column=0, sticky='we', **opts_button_grid)
+        self.button_stop.grid(row=0, column=1, sticky='we', **opts_button_grid)
         
         self.button_start['state'] = 'disabled'
         self.button_stop['state'] = 'disabled'
 
         ## frame_sol
         ## UI for controlling solenoids.
-        self.button_vac_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_vac_on))
-        self.button_vac_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_vac_off))
-        self.button_vac_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_vac_trig))
-        self.button_sol0_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_sol0_on))
-        self.button_sol0_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_sol0_off))
-        self.button_sol0_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_sol0_trig))
-        self.button_sol1_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_sol1_on))
-        self.button_sol1_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_sol1_off))
-        self.button_sol1_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_sol1_trig))
-        self.button_sol2_on = tk.Button(frame_sol, text='ON', command=lambda: self.ser_write(code_sol2_on))
-        self.button_sol2_off = tk.Button(frame_sol, text='OFF', command=lambda: self.ser_write(code_sol2_off))
-        self.button_sol2_trig = tk.Button(frame_sol, text='Trigger', command=lambda: self.ser_write(code_sol2_trig))
-        tk.Label(frame_sol, text='Vacuum: ', anchor='e').grid(row=0, column=0, sticky='we')
-        tk.Label(frame_sol, text='Solenoid 0: ', anchor='e').grid(row=1, column=0, sticky='we')
-        tk.Label(frame_sol, text='Solenoid 1: ', anchor='e').grid(row=2, column=0, sticky='we')
-        tk.Label(frame_sol, text='Solenoid 2: ', anchor='e').grid(row=3, column=0, sticky='we')
-        self.button_vac_on.grid(row=0, column=1, sticky='we')
-        self.button_vac_off.grid(row=0, column=2, sticky='we')
-        self.button_vac_trig.grid(row=0, column=3, sticky='we')
-        self.button_sol0_on.grid(row=1, column=1, sticky='we')
-        self.button_sol0_off.grid(row=1, column=2, sticky='we')
-        self.button_sol0_trig.grid(row=1, column=3, sticky='we')
-        self.button_sol1_on.grid(row=2, column=1, sticky='we')
-        self.button_sol1_off.grid(row=2, column=2, sticky='we')
-        self.button_sol1_trig.grid(row=2, column=3, sticky='we')
-        self.button_sol2_on.grid(row=3, column=1, sticky='we')
-        self.button_sol2_off.grid(row=3, column=2, sticky='we')
-        self.button_sol2_trig.grid(row=3, column=3, sticky='we')
+        self.button_vac_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_vac_on), **opts_button)
+        self.button_vac_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_vac_off), **opts_button)
+        self.button_vac_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_vac_trig), **opts_button)
+        self.button_sol0_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_sol0_on), **opts_button)
+        self.button_sol0_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_sol0_off), **opts_button)
+        self.button_sol0_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_sol0_trig), **opts_button)
+        self.button_sol1_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_sol1_on), **opts_button)
+        self.button_sol1_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_sol1_off), **opts_button)
+        self.button_sol1_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_sol1_trig), **opts_button)
+        self.button_sol2_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_sol2_on), **opts_button)
+        self.button_sol2_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_sol2_off), **opts_button)
+        self.button_sol2_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_sol2_trig), **opts_button)
+        tk.Label(frame_sol, text='On', anchor='center').grid(row=0, column=1, sticky='we')
+        tk.Label(frame_sol, text='Off', anchor='center').grid(row=0, column=2, sticky='we')
+        tk.Label(frame_sol, text='Trig', anchor='center').grid(row=0, column=3, sticky='we')
+        tk.Label(frame_sol, text='Vacuum: ', anchor='e').grid(row=1, column=0, sticky='we')
+        tk.Label(frame_sol, text='Solenoid 0: ', anchor='e').grid(row=2, column=0, sticky='we')
+        tk.Label(frame_sol, text='Solenoid 1: ', anchor='e').grid(row=3, column=0, sticky='we')
+        tk.Label(frame_sol, text='Solenoid 2: ', anchor='e').grid(row=4, column=0, sticky='we')
+        self.button_vac_on.grid(row=1, column=1, sticky='we', **opts_button_grid)
+        self.button_vac_off.grid(row=1, column=2, sticky='we', **opts_button_grid)
+        self.button_vac_trig.grid(row=1, column=3, sticky='we', **opts_button_grid)
+        self.button_sol0_on.grid(row=2, column=1, sticky='we', **opts_button_grid)
+        self.button_sol0_off.grid(row=2, column=2, sticky='we', **opts_button_grid)
+        self.button_sol0_trig.grid(row=2, column=3, sticky='we', **opts_button_grid)
+        self.button_sol1_on.grid(row=3, column=1, sticky='we', **opts_button_grid)
+        self.button_sol1_off.grid(row=3, column=2, sticky='we', **opts_button_grid)
+        self.button_sol1_trig.grid(row=3, column=3, sticky='we', **opts_button_grid)
+        self.button_sol2_on.grid(row=4, column=1, sticky='we', **opts_button_grid)
+        self.button_sol2_off.grid(row=4, column=2, sticky='we', **opts_button_grid)
+        self.button_sol2_trig.grid(row=4, column=3, sticky='we', **opts_button_grid)
 
         self.button_vac_on['state'] = 'disabled'
         self.button_vac_off['state'] = 'disabled'
@@ -509,6 +528,23 @@ class InputManager(tk.Frame):
         self.button_sol2_on['state'] = 'disabled'
         self.button_sol2_off['state'] = 'disabled'
         self.button_sol2_trig['state'] = 'disabled'
+
+        # frame_cs
+        self.button_cs0 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_cs0))
+        self.button_cs1 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_cs1))
+        self.button_cs2 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_cs2))
+        tk.Label(frame_cue, text='Trig', anchor='center').grid(row=0, column=1, sticky='we')
+        tk.Label(frame_cue, text='CS0', anchor='center').grid(row=2, column=0, sticky='we')
+        tk.Label(frame_cue, text='CS1', anchor='center').grid(row=3, column=0, sticky='we')
+        tk.Label(frame_cue, text='CS2', anchor='center').grid(row=4, column=0, sticky='we')
+        self.button_cs0.grid(row=2, column=1, sticky='we', **opts_button_grid)
+        self.button_cs1.grid(row=3, column=1, sticky='we', **opts_button_grid)
+        self.button_cs2.grid(row=4, column=1, sticky='we', **opts_button_grid)
+        tk.Button(frame_cue, relief='flat', state='disabled').grid(row=1, column=1, **opts_button_grid)
+
+        self.button_cs0['state'] = 'disabled'
+        self.button_cs1['state'] = 'disabled'
+        self.button_cs2['state'] = 'disabled'
 
         ## Group GUI objects
         self.obj_to_disable_at_open = [
@@ -646,43 +682,43 @@ class InputManager(tk.Frame):
         window_param = tk.Toplevel(self)
         window_param.wm_title('{} parameters'.format(title_session))
 
-        frame_trial = tk.Frame(window_param)
-        frame_csus = tk.Frame(window_param)
-        frame_vac = tk.Frame(window_param)
-        frame_update = tk.Frame(window_param)
-        frame_trial.grid(row=0, column=0, sticky='we', padx=px, pady=py)
-        frame_csus.grid(row=1, column=0, sticky='we', padx=px, pady=py)
-        frame_vac.grid(row=2, column=0, sticky='we', padx=px, pady=py)
-        frame_update.grid(row=4, column=0, sticky='we', padx=px, pady=py)
+        frame_trial = ttk.Frame(window_param)
+        frame_csus = ttk.Frame(window_param)
+        frame_vac = ttk.Frame(window_param)
+        frame_update = ttk.Frame(window_param)
+        frame_trial.grid(row=0, column=0, sticky='we', **opts_frame1)
+        frame_csus.grid(row=1, column=0, sticky='we', **opts_frame1)
+        frame_vac.grid(row=2, column=0, sticky='we', **opts_frame1)
+        frame_update.grid(row=4, column=0, sticky='we', **opts_frame1)
         frame_trial.columnconfigure(0, weight=1)
         frame_csus.columnconfigure(0, weight=1)
         frame_vac.columnconfigure(0, weight=1)
         frame_update.columnconfigure(0, weight=1)
 
-        frame_trial_col0 = tk.Frame(frame_trial)
-        frame_trial_col1 = tk.Frame(frame_trial)
-        frame_trial_col0.grid(row=0, column=0, padx=px, pady=py)
-        frame_trial_col1.grid(row=0, column=1, padx=px, pady=py)
+        frame_trial_col0 = ttk.Frame(frame_trial)
+        frame_trial_col1 = ttk.Frame(frame_trial)
+        frame_trial_col0.grid(row=0, column=0, **opts_frame1)
+        frame_trial_col1.grid(row=0, column=1, **opts_frame1)
 
-        frame_cs = tk.Frame(frame_csus)
-        frame_us = tk.Frame(frame_csus)
-        frame_cs.grid(row=0, column=0, sticky='we', padx=px, pady=py)
-        frame_us.grid(row=0, column=1, sticky='we', padx=px, pady=py)
+        frame_cs = ttk.Frame(frame_csus)
+        frame_us = ttk.Frame(frame_csus)
+        frame_cs.grid(row=0, column=0, sticky='we', **opts_frame1)
+        frame_us.grid(row=0, column=1, sticky='we', **opts_frame1)
 
         # frame_trial
         # UI for trial.
-        radio_fixed_iti = tk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)#, command=lambda: self.gui_util('fixed'))
-        radio_uniform_iti = tk.Radiobutton(frame_trial_col0, text='Uniform distro', variable=self.var_iti_distro, value=1)#, command=lambda: self.gui_util('not_fixed'))
-        radio_expo_iti = tk.Radiobutton(frame_trial_col0, text='Exponential distro', variable=self.var_iti_distro, value=2)#, command=lambda: self.gui_util('not_fixed'))
+        radio_fixed_iti = ttk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)#, command=lambda: self.gui_util('fixed'))
+        radio_uniform_iti = ttk.Radiobutton(frame_trial_col0, text='Uniform distro', variable=self.var_iti_distro, value=1)#, command=lambda: self.gui_util('not_fixed'))
+        radio_expo_iti = ttk.Radiobutton(frame_trial_col0, text='Exponential distro', variable=self.var_iti_distro, value=2)#, command=lambda: self.gui_util('not_fixed'))
         radio_fixed_iti.grid(row=0, column=1, sticky='w')
         radio_uniform_iti.grid(row=1, column=1, sticky='w')
         radio_expo_iti.grid(row=2, column=1, sticky='w')
 
-        self.entry_mean_iti = tk.Entry(frame_trial_col1, **opts_entry)
-        self.entry_min_iti = tk.Entry(frame_trial_col1, **opts_entry)
-        self.entry_max_iti = tk.Entry(frame_trial_col1, **opts_entry)
-        self.entry_pre_stim = tk.Entry(frame_trial_col1, **opts_entry)
-        self.entry_post_stim = tk.Entry(frame_trial_col1, **opts_entry)
+        self.entry_mean_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
+        self.entry_min_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
+        self.entry_max_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
+        self.entry_pre_stim = ttk.Entry(frame_trial_col1, **opts_entry10)
+        self.entry_post_stim = ttk.Entry(frame_trial_col1, **opts_entry10)
         tk.Label(frame_trial_col1, text='Mean ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
         tk.Label(frame_trial_col1, text='Min ITI (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
         tk.Label(frame_trial_col1, text='Max ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
@@ -696,10 +732,10 @@ class InputManager(tk.Frame):
 
         # frame_csus
         # UI for CS-US
-        self.entry_cs0_dur = tk.Entry(frame_cs, **opts_entry)
-        self.entry_cs0_freq = tk.Entry(frame_cs, **opts_entry)
-        self.entry_cs1_dur = tk.Entry(frame_cs, **opts_entry)
-        self.entry_cs1_freq = tk.Entry(frame_cs, **opts_entry)
+        self.entry_cs0_dur = ttk.Entry(frame_cs, **opts_entry10)
+        self.entry_cs0_freq = ttk.Entry(frame_cs, **opts_entry10)
+        self.entry_cs1_dur = ttk.Entry(frame_cs, **opts_entry10)
+        self.entry_cs1_freq = ttk.Entry(frame_cs, **opts_entry10)
         tk.Label(frame_cs, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
         tk.Label(frame_cs, text='f (s' u'\u207b\u00b9' ')', anchor='center').grid(row=0, column=2, sticky='we')
         tk.Label(frame_cs, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
@@ -709,8 +745,8 @@ class InputManager(tk.Frame):
         self.entry_cs1_dur.grid(row=2, column=1, sticky='w')
         self.entry_cs1_freq.grid(row=2, column=2, sticky='w')
 
-        self.entry_us0_dur = tk.Entry(frame_us, **opts_entry)
-        self.entry_us1_dur = tk.Entry(frame_us, **opts_entry)
+        self.entry_us0_dur = ttk.Entry(frame_us, **opts_entry10)
+        self.entry_us1_dur = ttk.Entry(frame_us, **opts_entry10)
         tk.Label(frame_us, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
         tk.Label(frame_us, text='US0: ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_us, text='US1: ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -719,8 +755,8 @@ class InputManager(tk.Frame):
 
         # frame_vac
         # UI for vacuum.
-        self.entry_consumption_dur = tk.Entry(frame_vac, **opts_entry)
-        self.entry_vac_dur = tk.Entry(frame_vac, **opts_entry)
+        self.entry_consumption_dur = ttk.Entry(frame_vac, **opts_entry10)
+        self.entry_vac_dur = ttk.Entry(frame_vac, **opts_entry10)
         tk.Label(frame_vac, text='Consumption time limit (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_vac, text='Vacuum duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         self.entry_consumption_dur.grid(row=0, column=1, sticky='w')
@@ -728,8 +764,8 @@ class InputManager(tk.Frame):
 
         # frame_update
         # UI for 'Update' button
-        button_update = tk.Button(frame_update, text='Update', command=self.update_params)
-        button_update.grid(row=0, column=0)
+        button_update = ttk.Button(frame_update, text='Update', command=self.update_params, **opts_button)
+        button_update.grid(row=0, column=0, **opts_button_grid)
 
         entries = [
             self.entry_mean_iti,
@@ -765,45 +801,25 @@ class InputManager(tk.Frame):
         if session_type == 0:
             # Classical conditioning
 
-            frame_csus2 = tk.Frame(window_param)
-            frame_csus2.grid(row=3, column=0, sticky='e', padx=px, pady=py)
+            frame_csus2 = ttk.Frame(window_param)
+            frame_csus2.grid(row=3, column=0, sticky='e', **opts_frame1)
             
-            self.entry_cs2_dur = tk.Entry(frame_cs, **opts_entry)
-            self.entry_cs2_freq = tk.Entry(frame_cs, **opts_entry)
+            self.entry_cs2_dur = ttk.Entry(frame_cs, **opts_entry10)
+            self.entry_cs2_freq = ttk.Entry(frame_cs, **opts_entry10)
             tk.Label(frame_cs, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
             self.entry_cs2_dur.grid(row=3, column=1, sticky='w')
             self.entry_cs2_freq.grid(row=3, column=2, sticky='w')
 
-            self.entry_us2_dur = tk.Entry(frame_us, **opts_entry)
-            self.entry_us0_delay = tk.Entry(frame_us, **opts_entry)
-            self.entry_us1_delay = tk.Entry(frame_us, **opts_entry)
-            self.entry_us2_delay = tk.Entry(frame_us, **opts_entry)
+            self.entry_us2_dur = ttk.Entry(frame_us, **opts_entry10)
+            self.entry_us0_delay = ttk.Entry(frame_us, **opts_entry10)
+            self.entry_us1_delay = ttk.Entry(frame_us, **opts_entry10)
+            self.entry_us2_delay = ttk.Entry(frame_us, **opts_entry10)
             tk.Label(frame_us, text='US2: ', anchor='e').grid(row=3, column=0, sticky='e')
             tk.Label(frame_us, text='Delay (ms)', anchor='e').grid(row=0, column=2, sticky='e')
             self.entry_us2_dur.grid(row=3, column=1, sticky='w')
             self.entry_us0_delay.grid(row=1, column=2, sticky='w')
             self.entry_us1_delay.grid(row=2, column=2, sticky='w')
             self.entry_us2_delay.grid(row=3, column=2, sticky='w')
-
-            # self.entry_cs2_dur = tk.Entry(frame_csus2, width=entry_width)
-            # self.entry_cs2_freq = tk.Entry(frame_csus2, width=entry_width)
-            # self.entry_us2_dur = tk.Entry(frame_csus2, width=entry_width)
-            # tk.Label(frame_csus2, text='CS2 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-            # tk.Label(frame_csus2, text='CS2 frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=1, column=0, sticky='e')
-            # tk.Label(frame_csus2, text='US2 duration (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
-            # self.entry_cs2_dur.grid(row=0, column=1, sticky='w')
-            # self.entry_cs2_freq.grid(row=1, column=1, sticky='w')
-            # self.entry_us2_dur.grid(row=2, column=1, sticky='w')
-
-            # self.entry_us0_delay = tk.Entry(frame_csus0, width=entry_width)
-            # self.entry_us1_delay = tk.Entry(frame_csus1, width=entry_width)
-            # self.entry_us2_delay = tk.Entry(frame_csus2, width=entry_width)
-            # tk.Label(frame_csus0, text='US0 delay (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
-            # tk.Label(frame_csus1, text='US1 delay (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
-            # tk.Label(frame_csus2, text='US2 delay (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
-            # self.entry_us0_delay.grid(row=3, column=1, sticky='w')
-            # self.entry_us1_delay.grid(row=3, column=1, sticky='w')
-            # self.entry_us2_delay.grid(row=3, column=1, sticky='w')
             
             entries += [
                 self.entry_cs2_dur,
@@ -824,17 +840,17 @@ class InputManager(tk.Frame):
         elif session_type == 1:
             # Go/no-go
 
-            frame_gonogo = tk.Frame(window_param)
-            frame_gonogo.grid(row=3, column=0, sticky='e', padx=px, pady=py)
+            frame_gonogo = ttk.Frame(window_param)
+            frame_gonogo.grid(row=3, column=0, sticky='e', **opts_frame1)
 
             ### frame_gonogo
             ### UI for trial start (signal)
-            self.entry_trial_signal_offset = tk.Entry(frame_gonogo, **opts_entry)
-            self.entry_trial_signal_dur = tk.Entry(frame_gonogo, **opts_entry)
-            self.entry_trial_signal_freq = tk.Entry(frame_gonogo, **opts_entry)
-            self.entry_grace_dur = tk.Entry(frame_gonogo, **opts_entry)
-            self.entry_response_dur = tk.Entry(frame_gonogo, **opts_entry)
-            self.entry_timeout_dur = tk.Entry(frame_gonogo, **opts_entry)
+            self.entry_trial_signal_offset = ttk.Entry(frame_gonogo, **opts_entry10)
+            self.entry_trial_signal_dur = ttk.Entry(frame_gonogo, **opts_entry10)
+            self.entry_trial_signal_freq = ttk.Entry(frame_gonogo, **opts_entry10)
+            self.entry_grace_dur = ttk.Entry(frame_gonogo, **opts_entry10)
+            self.entry_response_dur = ttk.Entry(frame_gonogo, **opts_entry10)
+            self.entry_timeout_dur = ttk.Entry(frame_gonogo, **opts_entry10)
             tk.Label(frame_gonogo, text='Trial signal offset (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
             tk.Label(frame_gonogo, text='Trial signal duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
             tk.Label(frame_gonogo, text='Trial signal frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=2, column=0, sticky='e')
