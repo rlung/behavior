@@ -44,6 +44,9 @@ Example input:
 #define CODESOL2ON 58
 #define CODESOL2OFF 59
 #define CODESOL2TRIGGER 60
+#define CODECS0 61
+#define CODECS1 62
+#define CODECS2 63
 #define CODEPARAMS 68
 #define CODESTART 69
 #define DELIM ","         // Delimiter used for serial communication
@@ -90,14 +93,17 @@ unsigned long pre_stim;
 unsigned long post_stim;
 unsigned long cs0_dur;
 unsigned long cs0_freq;
+unsigned long cs0_pulse_dur;
 unsigned long us0_dur;
 unsigned long us0_delay;
 unsigned long cs1_dur;
 unsigned long cs1_freq;
+unsigned long cs1_pulse_dur;
 unsigned long us1_dur;
 unsigned long us1_delay;
 unsigned long cs2_dur;
 unsigned long cs2_freq;
+unsigned long cs2_pulse_dur;
 unsigned long us2_dur;
 unsigned long us2_delay;
 unsigned long consumption_dur;
@@ -202,6 +208,13 @@ void LookForSignal(int waiting_for, unsigned long ts) {
           delay(us2_dur);
           digitalWrite(pin_sol_2, LOW);
           break;
+        case CODECS0:
+          if (cs0_pulse_dur) {
+
+          }
+          else {
+            tone(pin_tone, cs0_freq, cs0_dur);
+          }
         case CODEPARAMS:
           if (waiting_for == 1) return;   // GetParams
           break;
