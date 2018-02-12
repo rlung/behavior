@@ -80,23 +80,28 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
       digitalWrite(pin_signal, HIGH);
       behav.SendData(stream, code_trial_signal, ts, cs_trial_types[trial_ix]);
     }
+
+    // Deliver CS
     if (! stimmed && ts >= ts_stim) {
-      // Present CS
       stimmed = true;
-      cs_start = ts;
       tone(pin_tone, trial_tone_freq, trial_tone_dur);
       behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
     }
-    if (trial_tone_pulse_dur && stimmed && ts < (ts_stim + trial_tone_dur)) {
-      // Pulse CS if necessary
-        if ((ts - cs_start) % (trial_tone_pulse_dur * 2) < trial_tone_pulse_dur) {
-          tone(pin_tone, trial_tone_freq);
-        }
-        else {
-          noTone(pin_tone);
-        }
+
+    // Pulsed cue
+    if (stimmed && trial_tone_pulse_dur) {
+      if (ts < (ts_stim + trial_tone_dur)) {
+        // Pulse train
+        if ((ts - ts_stim) % (trial_tone_pulse_dur * 2) < trial_tone_pulse_dur) tone(pin_tone, trial_tone_freq);
+        else noTone(pin_tone);
+      }
+      else if (ts > (ts_stim + trial_tone_dur)) {
+        // End pulse train
+        noTone(pin_tone);
+      }
     }
-    else noTone(pin_tone);
+
+    // Deliver US (if responded)
     if (! responded && ts >= ts_response_window && ts < ts_timeout) {
       if (! response_started) {
         response_started = true;
