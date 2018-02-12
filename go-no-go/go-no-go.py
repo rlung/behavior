@@ -370,7 +370,7 @@ class InputManager(ttk.Frame):
         ### frame_trial_params
         ### UI for session parameters.
         self.button_params = ttk.Button(frame_trial_params, text='Parameters', command=self.set_params, **opts_button)
-        self.text_params = tk.Text(frame_trial_params, width=50, height=10, font=("Arial", 8))
+        self.text_params = tk.Text(frame_trial_params, width=50, height=10, font=('Arial', 8), relief='flat')
         self.button_params.grid(row=0, column=0, sticky='we', **opts_button_grid)
         self.text_params.grid(row=1, column=0, sticky='we')
         # self.text_params['state'] = 'disabled'
@@ -606,6 +606,9 @@ class InputManager(ttk.Frame):
             self.button_sol1_off,
             self.button_sol2_on,
             self.button_sol2_off,
+            self.button_cs0,
+            self.button_cs1,
+            self.button_cs2,
         ]
         self.obj_to_enable_at_start = [
             self.button_stop,
@@ -717,12 +720,13 @@ class InputManager(ttk.Frame):
 
         # frame_trial
         # UI for trial.
-        radio_fixed_iti = ttk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)#, command=lambda: self.gui_util('fixed'))
-        radio_uniform_iti = ttk.Radiobutton(frame_trial_col0, text='Uniform distro', variable=self.var_iti_distro, value=1)#, command=lambda: self.gui_util('not_fixed'))
-        radio_expo_iti = ttk.Radiobutton(frame_trial_col0, text='Exponential distro', variable=self.var_iti_distro, value=2)#, command=lambda: self.gui_util('not_fixed'))
-        radio_fixed_iti.grid(row=0, column=1, sticky='w')
-        radio_uniform_iti.grid(row=1, column=1, sticky='w')
-        radio_expo_iti.grid(row=2, column=1, sticky='w')
+        radio_fixed_iti = ttk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)
+        radio_uniform_iti = ttk.Radiobutton(frame_trial_col0, text='Uniform distro', variable=self.var_iti_distro, value=1)
+        radio_expo_iti = ttk.Radiobutton(frame_trial_col0, text='Exponential distro', variable=self.var_iti_distro, value=2)
+        tk.Label(frame_trial_col0, text='ITI variability').grid(row=0, column=0, sticky='w')
+        radio_fixed_iti.grid(row=1, column=0, sticky='w')
+        radio_uniform_iti.grid(row=2, column=0, sticky='w')
+        radio_expo_iti.grid(row=3, column=0, sticky='w')
 
         self.entry_mean_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
         self.entry_min_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
