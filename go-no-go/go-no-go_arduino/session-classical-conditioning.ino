@@ -82,21 +82,19 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
       stimmed = true;
       tone(pin_tone, trial_tone_freq, trial_tone_dur);
       behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
-      if (trial_tone_pulse_dur) {
-        pulsed_cs_start = ts;
-        pulsed_cs_dur = trial_tone_dur;
-        pulsed_cs_freq = trial_tone_freq;
-        pulsed_cs_pulse_dur = trial_tone_pulse_dur;
-      }
     }
 
     // Pulsed cue
-    if (trial_tone_pulse_dur && ts < (pulsed_cs_start + trial_tone_dur)) {
-      if ((ts - pulsed_cs_start) % (trial_tone_pulse_dur * 2) < trial_tone_pulse_dur) tone(pin_tone, trial_tone_freq);
-      else noTone(pin_tone);
-    }
-    else if (trial_tone_pulse_dur && ts > (pulsed_cs_start + trial_tone_dur)) {
-      noTone(pin_tone);
+    if (stimmed && trial_tone_pulse_dur) {
+      if (ts < (ts_stim + trial_tone_dur)) {
+        // Pulse train
+        if ((ts - ts_stim) % (trial_tone_pulse_dur * 2) < trial_tone_pulse_dur) tone(pin_tone, trial_tone_freq);
+        else noTone(pin_tone);
+      }
+      else if (ts > (ts_stim + trial_tone_dur)) {
+        // End pulse train
+        noTone(pin_tone);
+      }
     }
 
     // Present US
