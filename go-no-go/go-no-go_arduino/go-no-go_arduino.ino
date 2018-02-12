@@ -119,10 +119,6 @@ unsigned int image_ttl_dur;
 unsigned int track_period;
 
 // Other variables
-unsigned long pulsed_cs_start;  // Used for pulsed cues
-unsigned long pulsed_cs_dur;
-unsigned long pulsed_cs_freq;
-unsigned long pulsed_cs_pulse_dur; 
 int *cs_trial_types;
 unsigned long next_trial_ts;
 unsigned long trial_num;
@@ -215,7 +211,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
         case CODECS0:
           tone(pin_tone, cs0_freq, cs0_dur);
           if (cs0_pulse_dur) {
-            pulsed_cs_start = millis();
+            unsigned long pulsed_cs_start = millis();
             while (millis() < (pulsed_cs_start + cs0_dur)) {
               if ((millis() - pulsed_cs_start) % (cs0_pulse_dur * 2) < cs0_pulse_dur) tone(pin_tone, cs0_freq);
               else noTone(pin_tone);
@@ -226,7 +222,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
         case CODECS1:
           tone(pin_tone, cs1_freq, cs1_dur);
           if (cs1_pulse_dur) {
-            pulsed_cs_start = millis();
+            unsigned long pulsed_cs_start = millis();
             while (millis() < (pulsed_cs_start + cs1_dur)) {
               if ((millis() - pulsed_cs_start) % (cs1_pulse_dur * 2) < cs1_pulse_dur) tone(pin_tone, cs1_freq);
               else noTone(pin_tone);
@@ -237,7 +233,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
         case CODECS2:
           tone(pin_tone, cs2_freq, cs2_dur);
           if (cs2_pulse_dur) {
-            pulsed_cs_start = millis();
+            unsigned long pulsed_cs_start = millis();
             while (millis() < (pulsed_cs_start + cs2_dur)) {
               if ((millis() - pulsed_cs_start) % (cs2_pulse_dur * 2) < cs2_pulse_dur) tone(pin_tone, cs2_freq);
               else noTone(pin_tone);

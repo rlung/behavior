@@ -16,8 +16,6 @@ Packages needed:
 
 
 TODO:
-- pulsing tone
-- trigger CS
 - CS names
 
 '''
