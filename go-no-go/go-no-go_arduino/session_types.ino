@@ -9,6 +9,8 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
   static unsigned int trial_ix;
   static unsigned int trial_tone_freq;    // Defines tone frequency for trial
   static unsigned int trial_tone_dur;     // Defines tone duration for trial
+  static unsigned int trial_tone_pulse_dur;
+  static unsigned long cs_start;
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
   static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
   static unsigned int trial_us_delay;
@@ -36,6 +38,7 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
     if (cs_trial_types[trial_ix] == 0) {
       trial_tone_freq = cs0_freq;
       trial_tone_dur = cs0_dur;
+      trial_tone_pulse_dur = cs0_pulse_dur;
       trial_sol_pin = pin_sol_0;
       trial_sol_dur = us0_dur;
       trial_us_delay = us0_delay;
@@ -43,6 +46,7 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
     else if (cs_trial_types[trial_ix] == 1) {
       trial_tone_freq = cs1_freq;
       trial_tone_dur = cs1_dur;
+      trial_tone_pulse_dur = cs1_pulse_dur;
       trial_sol_pin = pin_sol_1;
       trial_sol_dur = us1_dur;
       trial_us_delay = us1_delay;
@@ -50,6 +54,7 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
     else if (cs_trial_types[trial_ix] == 2) {
       trial_tone_freq = cs2_freq;
       trial_tone_dur = cs2_dur;
+      trial_tone_pulse_dur = cs2_pulse_dur;
       trial_sol_pin = pin_sol_2;
       trial_sol_dur = us2_dur;
       trial_us_delay = us2_delay;
@@ -75,9 +80,20 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
     if (! stimmed && ts >= ts_stim) {
       // Present CS
       stimmed = true;
+      cs_start = ts;
       tone(pin_tone, trial_tone_freq, trial_tone_dur);
       behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
     }
+    if (trial_tone_pulse_dur && stimmed && ts < (ts_stim + trial_tone_dur)) {
+      // Pulse CS if necessary
+        if ((ts - cs_start) % (trial_tone_pulse_dur * 2) < trial_tone_pulse_dur) {
+          tone(pin_tone, trial_tone_freq);
+        }
+        else {
+          noTone(pin_tone);
+        }
+    }
+    else noTone(pin_tone);
     if (! rewarded && ts >= ts_us) {
       // Deliver reward
       rewarded = true;
@@ -97,6 +113,7 @@ void ClassicalConditioning(unsigned long ts, unsigned int lick_count) {
           break;
       }
       behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[trial_ix + 1]);  // Still need to correct for last trial
+
       // End trial
       in_trial = false;
       stimmed = false;
@@ -122,6 +139,8 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
   static unsigned int trial_ix;
   static unsigned int trial_tone_freq;    // Defines tone frequency for trial
   static unsigned int trial_tone_dur;     // Defines tone duration for trial
+  static unsigned int trial_tone_pulse_dur;
+  static unsigned long cs_start;
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
   static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
   static boolean in_trial;
@@ -152,12 +171,14 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
     if (cs_trial_types[trial_ix] == 0) {
       trial_tone_freq = cs0_freq;
       trial_tone_dur = cs0_dur;
+      trial_tone_pulse_dur = cs0_pulse_dur;
       trial_sol_pin = pin_sol_0;
       trial_sol_dur = us0_dur;
     }
     else if (cs_trial_types[trial_ix] == 1) {
       trial_tone_freq = cs1_freq;
       trial_tone_dur = cs1_dur;
+      trial_tone_pulse_dur = cs1_pulse_dur;
       trial_sol_pin = pin_sol_1;
       trial_sol_dur = us1_dur;
     }
@@ -189,9 +210,20 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
     if (! stimmed && ts >= ts_stim) {
       // Present CS
       stimmed = true;
+      cs_start = ts;
       tone(pin_tone, trial_tone_freq, trial_tone_dur);
       behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
     }
+    if (trial_tone_pulse_dur && stimmed && ts < (ts_stim + trial_tone_dur)) {
+      // Pulse CS if necessary
+        if ((ts - cs_start) % (trial_tone_pulse_dur * 2) < trial_tone_pulse_dur) {
+          tone(pin_tone, trial_tone_freq);
+        }
+        else {
+          noTone(pin_tone);
+        }
+    }
+    else noTone(pin_tone);
     if (! responded && ts >= ts_response_window && ts < ts_timeout) {
       if (! response_started) {
         response_started = true;
