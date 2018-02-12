@@ -22,7 +22,7 @@ or not (CS is second bit, lick is first bit, eg, 3 is CS 1, lick; 2 is CS 1 no
 lick).
 
 Example input:
-0, 0, 0, 3, 4, 5, 0, 22000, 25000, 180000, 7000, 13000, 2000, 1000, 50, 3000, 2000, 5000, 50, 3000, 2000, 10000, 50, 3000, 8000, 50, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
+0, 60000, 60000, 20, 20, 0, 1, 60000, 40000, 80000, 7000, 13000, 2000, 3000, 0, 50, 3000, 2000, 6000, 0, 50, 3000, 2000, 12000, 0, 50, 3000, 8000, 100, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
 
 */
 
@@ -210,11 +210,43 @@ void LookForSignal(int waiting_for, unsigned long ts) {
           break;
         case CODECS0:
           if (cs0_pulse_dur) {
-
+            unsigned long cs_start = millis();
+            while (millis() < cs_start + cs0_dur) {
+              if ((millis() - cs_start) % (cs0_pulse_dur * 2) < cs0_pulse_dur) tone(pin_tone, cs0_freq);
+              else noTone(pin_tone);
+            }
+            noTone(pin_tone);
           }
           else {
             tone(pin_tone, cs0_freq, cs0_dur);
           }
+          break;
+        case CODECS1:
+          if (cs1_pulse_dur) {
+            unsigned long cs_start = millis();
+            while (millis() < cs_start + cs1_dur) {
+              if ((millis() - cs_start) % (cs1_pulse_dur * 2) < cs1_pulse_dur) tone(pin_tone, cs1_freq);
+              else noTone(pin_tone);
+            }
+            noTone(pin_tone);
+          }
+          else {
+            tone(pin_tone, cs1_freq, cs1_dur);
+          }
+          break;
+        case CODECS2:
+          if (cs2_pulse_dur) {
+            unsigned long cs_start = millis();
+            while (millis() < cs_start + cs2_dur) {
+              if ((millis() - cs_start) % (cs2_pulse_dur * 2) < cs2_pulse_dur) tone(pin_tone, cs2_freq);
+              else noTone(pin_tone);
+            }
+            noTone(pin_tone);
+          }
+          else {
+            tone(pin_tone, cs2_freq, cs2_dur);
+          }
+          break;
         case CODEPARAMS:
           if (waiting_for == 1) return;   // GetParams
           break;
@@ -231,7 +263,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 35;
+  const int paramNum = 38;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -252,27 +284,30 @@ void GetParams() {
   post_stim = parameters[11];
   cs0_dur = parameters[12];
   cs0_freq = parameters[13];
-  us0_dur = parameters[14];
-  us0_delay = parameters[15];
-  cs1_dur = parameters[16];
-  cs1_freq = parameters[17];
-  us1_dur = parameters[18];
-  us1_delay = parameters[19];
-  cs2_dur = parameters[20];
-  cs2_freq = parameters[21];
-  us2_dur = parameters[22];
-  us2_delay = parameters[23];
-  consumption_dur = parameters[24];
-  vac_dur = parameters[25];
-  trial_signal_offset = parameters[26];
-  trial_signal_dur = parameters[27];
-  trial_signal_freq = parameters[28];
-  grace_dur = parameters[29];
-  response_dur = parameters[30];
-  timeout_dur = parameters[31];
-  image_all = parameters[32];
-  image_ttl_dur = parameters[33];
-  track_period = parameters[34];
+  cs0_pulse_dur = parameters[14];
+  us0_dur = parameters[15];
+  us0_delay = parameters[16];
+  cs1_dur = parameters[17];
+  cs1_freq = parameters[18];
+  cs1_pulse_dur = parameters[19];
+  us1_dur = parameters[20];
+  us1_delay = parameters[21];
+  cs2_dur = parameters[22];
+  cs2_freq = parameters[23];
+  cs2_pulse_dur = parameters[24];
+  us2_dur = parameters[25];
+  us2_delay = parameters[26];
+  consumption_dur = parameters[27];
+  vac_dur = parameters[28];
+  trial_signal_offset = parameters[29];
+  trial_signal_dur = parameters[30];
+  trial_signal_freq = parameters[31];
+  grace_dur = parameters[32];
+  response_dur = parameters[33];
+  timeout_dur = parameters[34];
+  image_all = parameters[35];
+  image_ttl_dur = parameters[36];
+  track_period = parameters[37];
 
   if (session_type == 0) {
     trial_num = cs0_num + cs1_num + cs2_num;
