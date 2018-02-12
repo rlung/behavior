@@ -110,21 +110,21 @@ code_response = 7;
 code_next_trial = 8;
 
 # Should do following as byte in decimal form...
-code_vac_on = '1'
-code_vac_off = '2'
-code_vac_trig = '3'
-code_sol0_on = '4'
-code_sol0_off = '5'
-code_sol0_trig = '6'
-code_sol1_on = '7'
-code_sol1_off = '8'
-code_sol1_trig = '9'
-code_sol2_on = ':'
-code_sol2_off = ';'
-code_sol2_trig = '<'
-code_cs0 = '='
-code_cs1 = '>'
-code_cs2 = '?'
+code_vac_on = '1'  # bytes([49])
+code_vac_off = '2'  # bytes([50])
+code_vac_trig = '3'  # bytes([51])
+code_sol0_on = '4'  # bytes([52])
+code_sol0_off = '5'  # bytes([53])
+code_sol0_trig = '6'  # bytes([54])
+code_sol1_on = '7'  # bytes([55])
+code_sol1_off = '8'  # bytes([56])
+code_sol1_trig = '9'  # bytes([57])
+code_sol2_on =  ':'  #bytes([58])
+code_sol2_off =  ';'  #bytes([59])
+code_sol2_trig =  '<'  #bytes([60])
+code_cs0 = '='  # bytes([61])
+code_cs1 = '>'  # bytes([62])
+code_cs2 = '?'  # bytes([63])
 
 # Events to record
 events = [
@@ -484,18 +484,18 @@ class InputManager(ttk.Frame):
 
         ## frame_sol
         ## UI for controlling solenoids.
-        self.button_vac_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_vac_on), **opts_button)
-        self.button_vac_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_vac_off), **opts_button)
-        self.button_vac_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_vac_trig), **opts_button)
-        self.button_sol0_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_sol0_on), **opts_button)
-        self.button_sol0_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_sol0_off), **opts_button)
-        self.button_sol0_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_sol0_trig), **opts_button)
-        self.button_sol1_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_sol1_on), **opts_button)
-        self.button_sol1_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_sol1_off), **opts_button)
-        self.button_sol1_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_sol1_trig), **opts_button)
-        self.button_sol2_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: self.ser_write(code_sol2_on), **opts_button)
-        self.button_sol2_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: self.ser_write(code_sol2_off), **opts_button)
-        self.button_sol2_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_sol2_trig), **opts_button)
+        self.button_vac_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: ser_write(self.ser, code_vac_on), **opts_button)
+        self.button_vac_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: ser_write(self.ser, code_vac_off), **opts_button)
+        self.button_vac_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_vac_trig), **opts_button)
+        self.button_sol0_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: ser_write(self.ser, code_sol0_on), **opts_button)
+        self.button_sol0_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: ser_write(self.ser, code_sol0_off), **opts_button)
+        self.button_sol0_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_sol0_trig), **opts_button)
+        self.button_sol1_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: ser_write(self.ser, code_sol1_on), **opts_button)
+        self.button_sol1_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: ser_write(self.ser, code_sol1_off), **opts_button)
+        self.button_sol1_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_sol1_trig), **opts_button)
+        self.button_sol2_on = ttk.Button(frame_sol, text='|', width=3, command=lambda: ser_write(self.ser, code_sol2_on), **opts_button)
+        self.button_sol2_off = ttk.Button(frame_sol, text=u'\u25EF', width=3, command=lambda: ser_write(self.ser, code_sol2_off), **opts_button)
+        self.button_sol2_trig = ttk.Button(frame_sol, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_sol2_trig), **opts_button)
         tk.Label(frame_sol, text='On', anchor='center').grid(row=0, column=1, sticky='we')
         tk.Label(frame_sol, text='Off', anchor='center').grid(row=0, column=2, sticky='we')
         tk.Label(frame_sol, text='Trig', anchor='center').grid(row=0, column=3, sticky='we')
@@ -530,9 +530,9 @@ class InputManager(ttk.Frame):
         self.button_sol2_trig['state'] = 'disabled'
 
         # frame_cs
-        self.button_cs0 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_cs0))
-        self.button_cs1 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_cs1))
-        self.button_cs2 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: self.ser_write(code_cs2))
+        self.button_cs0 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs0))
+        self.button_cs1 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs1))
+        self.button_cs2 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs2))
         tk.Label(frame_cue, text='Trig', anchor='center').grid(row=0, column=1, sticky='we')
         tk.Label(frame_cue, text='CS0', anchor='center').grid(row=2, column=0, sticky='we')
         tk.Label(frame_cue, text='CS1', anchor='center').grid(row=3, column=0, sticky='we')
@@ -636,7 +636,7 @@ class InputManager(ttk.Frame):
                 # Disable object
                 obj['state'] = 'disabled'
 
-            self.entry_serial_status.config(state='normal', fg='red')
+            self.entry_serial_status['state'] = 'normal'
             self.entry_serial_status.delete(0, 'end')
             self.entry_serial_status.insert(0, 'Opening...')
             self.entry_serial_status['state'] = 'readonly'
@@ -645,7 +645,7 @@ class InputManager(ttk.Frame):
             for obj in self.obj_to_enable_when_open:
                 obj['state'] = 'normal'
 
-            self.entry_serial_status.config(state='normal', fg='black')
+            self.entry_serial_status['state'] = 'normal'
             self.entry_serial_status.delete(0, 'end')
             self.entry_serial_status.insert(0, 'Opened')
             self.entry_serial_status['state'] = 'readonly'
@@ -655,7 +655,7 @@ class InputManager(ttk.Frame):
             for obj in self.obj_to_enable_when_open:
                 obj['state'] = 'disabled'
 
-            self.entry_serial_status.config(state='normal', fg='black')
+            self.entry_serial_status['state'] = 'normal'
             self.entry_serial_status.delete(0, 'end')
             self.entry_serial_status.insert(0, 'Closed')
             self.entry_serial_status['state'] = 'readonly'
@@ -670,7 +670,7 @@ class InputManager(ttk.Frame):
             for obj in self.obj_to_enable_at_start:
                 obj['state'] = 'disabled'
 
-            self.entry_serial_status.config(state='normal', fg='black')
+            self.entry_serial_status['state'] = 'normal'
             self.entry_serial_status.delete(0, tk.END)
             self.entry_serial_status.insert(0, 'Closed')
             self.entry_serial_status['state'] = 'readonly'
@@ -1021,7 +1021,7 @@ class InputManager(ttk.Frame):
         # Handle opening message from serial
         if self.var_print_arduino.get():
             while self.ser.in_waiting:
-                sys.stdout.write(arduino_head + self.ser.readline())
+                sys.stdout.write(arduino_head + ser_readline())
         else:
             self.ser.flushInput()
 
@@ -1069,7 +1069,7 @@ class InputManager(ttk.Frame):
         # Send parameters and make sure it's processed
         values = self.parameters.values()
         if self.var_verbose.get(): print('Sending parameters: {}'.format(values))
-        self.ser.write(code_params + '+'.join(str(s) for s in values))
+        ser_write(self.ser, code_params + '+'.join(str(s) for s in values))
 
         start_time = time.time()
         while 1:
@@ -1077,7 +1077,7 @@ class InputManager(ttk.Frame):
                 if self.var_print_arduino.get():
                     # Print incoming data
                     while self.ser.in_waiting:
-                        sys.stdout.write(arduino_head + self.ser.readline())
+                        sys.stdout.write(arduino_head + ser_readline())
                 print('Parameters uploaded to Arduino')
                 print('Ready to start')
                 return
@@ -1111,9 +1111,6 @@ class InputManager(ttk.Frame):
             self.port_var.set(ports[0])
         else:
             self.port_var.set('No ports found')
-
-    def ser_write(self, code):
-        self.ser.write(code)
 
     def get_save_file(self):
         '''Opens prompt for file for data to be saved on button press'''
@@ -1204,7 +1201,7 @@ class InputManager(ttk.Frame):
         # self.grp_cam.attrs['hsub'] = self.var_hsub.get()
 
         # Store session parameters into behavior group
-        for key, value in self.parameters.iteritems():
+        for key, value in self.parameters.items():
             self.grp_behav.attrs[key] = value
 
         # Setup multithreading for serial scan and recording
@@ -1225,7 +1222,7 @@ class InputManager(ttk.Frame):
         self.counter = {ev: 0 for ev in events}
 
         # Start session
-        self.ser.write(code_start)
+        ser_write(self.ser, code_start)
         thread_scan.start()
         start_time = datetime.now().time()
         print('Session started at {}'.format(start_time))
@@ -1259,7 +1256,7 @@ class InputManager(ttk.Frame):
         # End on "Stop" button (by user)
         if self.var_stop.get():
             self.var_stop.set(False)
-            self.ser.write('0')
+            ser_write(self.ser, '0')
             print('User triggered stop, sending signal to Arduino...')
 
         # Watch incoming queue
@@ -1296,7 +1293,7 @@ class InputManager(ttk.Frame):
         self.close_serial()
         # self.cam_close()
 
-        print('Writing behavioral data into HDF5 group {}'.format(self.gr_exp.name))
+        print('Writing behavioral data into HDF5 group {}'.format(self.grp_exp.name))
         self.grp_exp.attrs['subject'] = self.entry_subject.get()
         self.grp_exp.attrs['weight'] = self.entry_weight.get()
         self.grp_behav.attrs['end_time'] = end_time
@@ -1319,6 +1316,19 @@ class InputManager(ttk.Frame):
         if self.entry_slack.get():
             slack_msg(self.entry_slack.get(), 'Session ended')
         print('All done!')
+
+
+def ser_write(ser, code):
+    if not is_py2:
+        if type(code) is not bytes: code = code.encode()
+    ser.write(code)
+
+
+def ser_readline(ser):
+    if is_py2:
+        return ser.readline()
+    else:
+        return ser.readline().decode()
 
 
 def slack_msg(slack_recipient, msg, test=False, verbose=False):
@@ -1354,7 +1364,7 @@ def scan_serial(q_serial, ser, print_arduino=False, suppress=[]):
     '''
 
     while 1:
-        input_arduino = ser.readline()
+        input_arduino = ser_readline(ser)
         if not input_arduino: continue
 
         try:
