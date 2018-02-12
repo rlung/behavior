@@ -29,6 +29,7 @@ import matplotlib
 matplotlib.use('TKAgg')
 if is_py2:
     import Tkinter as tk
+    import ttk
     import tkFont
     import tkMessageBox
     import tkFileDialog
@@ -76,7 +77,7 @@ else:
 arduino_head = '  [a]: '
 
 # Styling
-opt_labelframe = {'relief': 'solid'}
+opts_labelframe = {}
 
 opts_entry = {
     # 'bg': 'white',
@@ -180,14 +181,17 @@ class InputManager(ttk.Frame):
         self.var_post_stim = tk.IntVar()
         self.var_cs0_dur = tk.IntVar()
         self.var_cs0_freq = tk.IntVar()
+        self.var_cs0_pulse = tk.IntVar()
         self.var_us0_delay = tk.IntVar()
         self.var_us0_dur = tk.IntVar()
         self.var_cs1_dur = tk.IntVar()
         self.var_cs1_freq = tk.IntVar()
+        self.var_cs1_pulse = tk.IntVar()
         self.var_us1_delay = tk.IntVar()
         self.var_us1_dur = tk.IntVar()
         self.var_cs2_dur = tk.IntVar()
         self.var_cs2_freq = tk.IntVar()
+        self.var_cs2_pulse = tk.IntVar()
         self.var_us2_delay = tk.IntVar()
         self.var_us2_dur = tk.IntVar()
         self.var_trial_signal_offset = tk.IntVar()
@@ -216,14 +220,17 @@ class InputManager(ttk.Frame):
         self.var_post_stim.set(13000)
         self.var_cs0_dur.set(2000)
         self.var_cs0_freq.set(3000)
+        self.var_cs0_pulse.set(0)
         self.var_us0_delay.set(3000)
         self.var_us0_dur.set(50)
         self.var_cs1_dur.set(2000)
         self.var_cs1_freq.set(6000)
+        self.var_cs1_pulse.set(0)
         self.var_us1_delay.set(3000)
         self.var_us1_dur.set(50)
         self.var_cs2_dur.set(2000)
         self.var_cs2_freq.set(12000)
+        self.var_cs2_pulse.set(0)
         self.var_us2_delay.set(3000)
         self.var_us2_dur.set(50)
         self.var_consumption_dur.set(8000)
@@ -271,8 +278,8 @@ class InputManager(ttk.Frame):
         frame_cam.grid(row=0, column=0, **opts_frame1)
 
         ### Arduino frame
-        frame_arduino = ttk.LabelFrame(frame_setup_col1, text='Arduino', **opt_labelframe)
-        frame_arduino.grid(row=1, column=0, **opts_frame1, sticky='we')
+        frame_arduino = ttk.LabelFrame(frame_setup_col1, text='Arduino', **opts_labelframe)
+        frame_arduino.grid(row=1, column=0, sticky='we', **opts_frame1)
         frame_arduino1 = ttk.Frame(frame_arduino)
         frame_arduino2 = ttk.Frame(frame_arduino)
         frame_arduino1.grid(row=0, column=0, sticky='we', **opts_frame1)
@@ -282,7 +289,7 @@ class InputManager(ttk.Frame):
         frame_arduino.grid_columnconfigure(0, weight=1)
 
         ### Debug frame
-        frame_debug = ttk.LabelFrame(frame_setup_col1, text='Debug', **opt_labelframe)
+        frame_debug = ttk.LabelFrame(frame_setup_col1, text='Debug', **opts_labelframe)
         frame_debug.grid(row=2, column=0, sticky='we', **opts_frame1)
         frame_debug.grid_columnconfigure(0, weight=1)
 
@@ -578,6 +585,9 @@ class InputManager(ttk.Frame):
             self.button_sol2_on,
             self.button_sol2_off,
             self.button_sol2_trig,
+            self.button_cs0,
+            self.button_cs1,
+            self.button_cs2,
         ]
         self.obj_to_disable_at_start = [
             self.button_close_port,
@@ -734,16 +744,21 @@ class InputManager(ttk.Frame):
         # UI for CS-US
         self.entry_cs0_dur = ttk.Entry(frame_cs, **opts_entry10)
         self.entry_cs0_freq = ttk.Entry(frame_cs, **opts_entry10)
+        self.entry_cs0_pulse = ttk.Entry(frame_cs, **opts_entry10)
         self.entry_cs1_dur = ttk.Entry(frame_cs, **opts_entry10)
         self.entry_cs1_freq = ttk.Entry(frame_cs, **opts_entry10)
+        self.entry_cs1_pulse = ttk.Entry(frame_cs, **opts_entry10)
         tk.Label(frame_cs, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
         tk.Label(frame_cs, text='f (s' u'\u207b\u00b9' ')', anchor='center').grid(row=0, column=2, sticky='we')
+        tk.Label(frame_cs, text='pulse (ms)', anchor='center').grid(row=0, column=3, sticky='we')
         tk.Label(frame_cs, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_cs, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
         self.entry_cs0_dur.grid(row=1, column=1, sticky='w')
         self.entry_cs0_freq.grid(row=1, column=2, sticky='w')
+        self.entry_cs0_pulse.grid(row=1, column=3, sticky='w')
         self.entry_cs1_dur.grid(row=2, column=1, sticky='w')
         self.entry_cs1_freq.grid(row=2, column=2, sticky='w')
+        self.entry_cs1_pulse.grid(row=2, column=3, sticky='w')
 
         self.entry_us0_dur = ttk.Entry(frame_us, **opts_entry10)
         self.entry_us1_dur = ttk.Entry(frame_us, **opts_entry10)
@@ -775,9 +790,11 @@ class InputManager(ttk.Frame):
             self.entry_post_stim,
             self.entry_cs0_dur,
             self.entry_cs0_freq,
+            self.entry_cs0_pulse,
             self.entry_us0_dur,
             self.entry_cs1_dur,
             self.entry_cs1_freq,
+            self.entry_cs1_pulse,
             self.entry_us1_dur,
             self.entry_consumption_dur,
             self.entry_vac_dur,
@@ -790,9 +807,11 @@ class InputManager(ttk.Frame):
             self.var_post_stim,
             self.var_cs0_dur,
             self.var_cs0_freq,
+            self.var_cs0_pulse,
             self.var_us0_dur,
             self.var_cs1_dur,
             self.var_cs1_freq,
+            self.var_cs1_pulse,
             self.var_us1_dur,
             self.var_consumption_dur,
             self.var_vac_dur,
@@ -806,9 +825,11 @@ class InputManager(ttk.Frame):
             
             self.entry_cs2_dur = ttk.Entry(frame_cs, **opts_entry10)
             self.entry_cs2_freq = ttk.Entry(frame_cs, **opts_entry10)
+            self.entry_cs2_pulse = ttk.Entry(frame_cs, **opts_entry10)
             tk.Label(frame_cs, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
             self.entry_cs2_dur.grid(row=3, column=1, sticky='w')
             self.entry_cs2_freq.grid(row=3, column=2, sticky='w')
+            self.entry_cs2_pulse.grid(row=3, column=3, sticky='w')
 
             self.entry_us2_dur = ttk.Entry(frame_us, **opts_entry10)
             self.entry_us0_delay = ttk.Entry(frame_us, **opts_entry10)
@@ -824,6 +845,7 @@ class InputManager(ttk.Frame):
             entries += [
                 self.entry_cs2_dur,
                 self.entry_cs2_freq,
+                self.entry_cs2_pulse,
                 self.entry_us2_dur,
                 self.entry_us0_delay,
                 self.entry_us1_delay,
@@ -832,6 +854,7 @@ class InputManager(ttk.Frame):
             entry_vars += [
                 self.var_cs2_dur,
                 self.var_cs2_freq,
+                self.var_cs2_pulse,
                 self.var_us2_dur,
                 self.var_us0_delay,
                 self.var_us1_delay,
@@ -900,9 +923,11 @@ class InputManager(ttk.Frame):
         self.var_post_stim.set(int(self.entry_post_stim.get()))
         self.var_cs0_dur.set(int(self.entry_cs0_dur.get()))
         self.var_cs0_freq.set(int(self.entry_cs0_freq.get()))
+        self.var_cs0_pulse.set(int(self.entry_cs0_pulse.get()))
         self.var_us0_dur.set(int(self.entry_us0_dur.get()))
         self.var_cs1_dur.set(int(self.entry_cs1_dur.get()))
         self.var_cs1_freq.set(int(self.entry_cs1_freq.get()))
+        self.var_cs1_pulse.set(int(self.entry_cs1_pulse.get()))
         self.var_us1_dur.set(int(self.entry_us1_dur.get()))
         self.var_consumption_dur.set(int(self.entry_consumption_dur.get()))
         self.var_vac_dur.set(int(self.entry_vac_dur.get()))
@@ -913,6 +938,7 @@ class InputManager(ttk.Frame):
             self.var_us1_delay.set(int(self.entry_us1_delay.get()))
             self.var_cs2_dur.set(int(self.entry_cs2_dur.get()))
             self.var_cs2_freq.set(int(self.entry_cs2_freq.get()))
+            self.var_cs2_pulse.set(int(self.entry_cs2_pulse.get()))
             self.var_us2_delay.set(int(self.entry_us2_delay.get()))
             self.var_us2_dur.set(int(self.entry_us2_dur.get()))
 
@@ -1005,7 +1031,6 @@ class InputManager(ttk.Frame):
             self.ser.open()
         except serial.SerialException as err:
             # Error during serial.open()
-            pdb.set_trace()
             err_msg = err.args                                           # Could be done bettter...
             tkMessageBox.showerror('Serial error', err_msg)
             print('Serial error: {}'.format(err_msg))
@@ -1021,7 +1046,7 @@ class InputManager(ttk.Frame):
         # Handle opening message from serial
         if self.var_print_arduino.get():
             while self.ser.in_waiting:
-                sys.stdout.write(arduino_head + ser_readline())
+                sys.stdout.write(arduino_head + ser_readline(self.ser))
         else:
             self.ser.flushInput()
 
@@ -1044,14 +1069,17 @@ class InputManager(ttk.Frame):
         self.parameters['post_stim'] = self.var_post_stim.get()
         self.parameters['cs0_dur'] = self.var_cs0_dur.get()
         self.parameters['cs0_freq'] = self.var_cs0_freq.get()
+        self.parameters['cs0_pulse'] = self.var_cs0_pulse.get()
         self.parameters['us0_dur'] = self.var_us0_dur.get()
         self.parameters['us0_delay'] = self.var_us0_delay.get()
         self.parameters['cs1_dur'] = self.var_cs1_dur.get()
         self.parameters['cs1_freq'] = self.var_cs1_freq.get()
+        self.parameters['cs1_pulse'] = self.var_cs1_pulse.get()
         self.parameters['us1_dur'] = self.var_us1_dur.get()
         self.parameters['us1_delay'] = self.var_us1_delay.get()
         self.parameters['cs2_dur'] = self.var_cs2_dur.get()
         self.parameters['cs2_freq'] = self.var_cs2_freq.get()
+        self.parameters['cs2_pulse'] = self.var_cs2_pulse.get()
         self.parameters['us2_dur'] = self.var_us2_dur.get()
         self.parameters['us2_delay'] = self.var_us2_delay.get()
         self.parameters['consumption_dur'] = self.var_consumption_dur.get()
@@ -1077,7 +1105,7 @@ class InputManager(ttk.Frame):
                 if self.var_print_arduino.get():
                     # Print incoming data
                     while self.ser.in_waiting:
-                        sys.stdout.write(arduino_head + ser_readline())
+                        sys.stdout.write(arduino_head + ser_readline(self.ser))
                 print('Parameters uploaded to Arduino')
                 print('Ready to start')
                 return
@@ -1261,7 +1289,8 @@ class InputManager(ttk.Frame):
 
         # Watch incoming queue
         # Data has format: [code, ts, extra values]
-        if not self.q_serial.empty():
+        # Empty queue before leaving. Otherwise, a backlog will grow.
+        while not self.q_serial.empty():
             code, ts, data = self.q_serial.get()
 
             # End session
@@ -1379,7 +1408,7 @@ def scan_serial(q_serial, ser, print_arduino=False, suppress=[]):
             if input_arduino: q_serial.put(input_split)
             if input_split[0] == code_end:
                 # q_to_rec_thread.put(0)
-                if print_arduino: print("  Scan complete.")
+                if print_arduino: print('  Scan complete.')
                 return
 
 
