@@ -40,12 +40,6 @@ import os
 import sys
 import h5py
 import numpy as np
-from matplotlib.figure import Figure
-import matplotlib.animation as animation
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib import style
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-import seaborn as sns
 
 import pdb
 
@@ -62,6 +56,7 @@ else:
 # Header to print with Arduino outputs
 arduino_head = '  [a]: '
 
+# Styling
 entry_width = 10
 ew = 10  # Width of Entry UI
 px = 15
@@ -69,20 +64,26 @@ py = 5
 px1 = 5
 py1 = 2
 
-# Serial codes
+opts_frame_sep = {'padx': 50, 'pady': 15, }
+
+# Serial input codes
 code_end = 0
-code_steps = 1
-code_trial_start = 3
-code_trial_man = 4
-code_rail_leave = 5
-code_rail_home = 6
-code_track = 7
+code_at_mouse = 3
+code_to_mouse = 5
+code_at_home = 6
+code_move = 7
+
+# Serial output codes
+code_step_forward = '3'
+code_step_backward = '4'
+
+events = ['at_mouse', 'to_mouse', 'at_home', 'movement']
 
 
-class InputManager(tk.Frame):
+class InputManager(ttk.Frame):
 
     def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
+        ttk.Frame.__init__(self, parent)
 
         # GUI layout
         # parent
@@ -111,30 +112,30 @@ class InputManager(tk.Frame):
 
         # Lay out GUI
 
-        frame_setup = tk.Frame(parent)
+        frame_setup = ttk.Frame(parent)
         frame_setup.grid(row=0, column=0)
-        frame_setup_col0 = tk.Frame(frame_setup)
-        frame_setup_col1 = tk.Frame(frame_setup)
-        frame_setup_col2 = tk.Frame(frame_setup)
+        frame_setup_col0 = ttk.Frame(frame_setup)
+        frame_setup_col1 = ttk.Frame(frame_setup)
+        frame_setup_col2 = ttk.Frame(frame_setup)
         frame_setup_col0.grid(row=0, column=0, sticky='we')
         frame_setup_col1.grid(row=0, column=1, sticky='we')
         frame_setup_col2.grid(row=0, column=2, sticky='we')
 
         # Session frame
-        frame_params = tk.Frame(frame_setup_col0)
+        frame_params = ttk.Frame(frame_setup_col0)
         frame_params.grid(row=0, column=0, padx=15, pady=5)
         frame_params.columnconfigure(0, weight=1)
 
-        frame_session = tk.Frame(frame_params)
-        frame_misc = tk.Frame(frame_params)
+        frame_session = ttk.Frame(frame_params)
+        frame_misc = ttk.Frame(frame_params)
         frame_session.grid(row=0, column=0, sticky='e', padx=px, pady=py)
         frame_misc.grid(row=2, column=0, sticky='e', padx=px, pady=py)
  
         # Arduino frame
         frame_arduino = ttk.LabelFrame(frame_setup_col1, text='Arduino')
         frame_arduino.grid(row=1, column=0, padx=px, pady=py, sticky='we')
-        frame_arduino1 = tk.Frame(frame_arduino)
-        frame_arduino2 = tk.Frame(frame_arduino)
+        frame_arduino1 = ttk.Frame(frame_arduino)
+        frame_arduino2 = ttk.Frame(frame_arduino)
         frame_arduino1.grid(row=0, column=0, sticky='we', padx=px, pady=py)
         frame_arduino2.grid(row=1, column=0, sticky='we', padx=px, pady=py)
         frame_arduino2.grid_columnconfigure(0, weight=1)
@@ -147,27 +148,42 @@ class InputManager(tk.Frame):
         frame_debug.grid_columnconfigure(0, weight=1)
 
         # Notes frame
-        frame_notes = tk.Frame(frame_setup_col2)
+        frame_notes = ttk.Frame(frame_setup_col2)
         frame_notes.grid(row=0, sticky='wens', padx=px, pady=py)
         frame_notes.grid_columnconfigure(0, weight=1)
 
         # Saved file frame
-        frame_file = tk.Frame(frame_setup_col2)
+        frame_file = ttk.Frame(frame_setup_col2)
         frame_file.grid(row=1, column=0, padx=px, pady=py, sticky='we')
         frame_file.columnconfigure(0, weight=3)
         frame_file.columnconfigure(1, weight=1)
 
         # Slack frame
-        frame_slack = tk.Frame(frame_setup_col2)
+        frame_slack = ttk.Frame(frame_setup_col2)
         frame_slack.grid(row=2, column=0, sticky='we', padx=px, pady=py)
         frame_slack.grid_columnconfigure(0, weight=3)
         frame_slack.grid_columnconfigure(1, weight=1)
 
         # Start-stop frame
-        frame_start = tk.Frame(frame_setup_col2)
+        frame_start = ttk.Frame(frame_setup_col2)
         frame_start.grid(row=3, column=0, sticky='we', padx=px, pady=py)
         frame_start.grid_columnconfigure(0, weight=1)
         frame_start.grid_columnconfigure(1, weight=1)
+
+        ## Separator frame
+        frame_sep = tk.Frame(parent, height=1, bg='gray')
+        frame_sep.grid(row=1, column=0, sticky='we', **opts_frame_sep)
+
+        ## Monitor frame
+        frame_monitor = ttk.Frame(parent)
+        frame_monitor.grid(row=2, column=0)
+        frame_setup_col0 = ttk.Frame(frame_monitor)
+        frame_setup_col0.grid(row=0, column=0, sticky='we')
+
+        ### Stepper frame
+        frame_stepper = ttk.Frame(frame_monitor)
+        frame_stepper.grid(row=0, column=0, sticky='we')
+        frame_stepper.grid_columnconfigure(0, weight=1)  # Fills into frame
 
         # Add GUI components
 
@@ -196,15 +212,12 @@ class InputManager(tk.Frame):
         self.check_image_all = ttk.Checkbutton(frame_misc, variable=self.var_image_all)
         self.entry_image_ttl_dur = ttk.Entry(frame_misc, width=entry_width)
         self.entry_track_period = ttk.Entry(frame_misc, width=entry_width)
-        self.entry_track_steps = ttk.Entry(frame_misc, width=entry_width)
         tk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
-        tk.Label(frame_misc, text='Track steps: ', anchor='e').grid(row=3, column=0, sticky='e')
         self.check_image_all.grid(row=0, column=1, sticky='w')
         self.entry_image_ttl_dur.grid(row=1, column=1, sticky='w')
         self.entry_track_period.grid(row=2, column=1, sticky='w')
-        self.entry_track_steps.grid(row=3, column=1, sticky='w')
 
         ### frame_arduino
         ### UI for Arduino
@@ -237,10 +250,10 @@ class InputManager(tk.Frame):
         self.scrolled_notes.grid(row=1, column=0, sticky='wens')
 
         ## UI for saved file
-        self.entry_save = ttk.Entry(frame_file)
+        self.entry_file = ttk.Entry(frame_file)
         self.button_save_file = ttk.Button(frame_file, command=self.get_save_file)
         tk.Label(frame_file, text='File to save data:', anchor='w').grid(row=0, column=0, columnspan=2, sticky='w')
-        self.entry_save.grid(row=1, column=0, sticky='wens')
+        self.entry_file.grid(row=1, column=0, sticky='wens')
         self.button_save_file.grid(row=1, column=1, sticky='e')
 
         icon_folder = ImageTk.PhotoImage(file='graphics/folder.png')
@@ -264,31 +277,45 @@ class InputManager(tk.Frame):
         self.button_stop = ttk.Button(frame_start, text='Stop', command=lambda: self.var_stop.set(True))
         self.button_start.grid(row=2, column=0, sticky='we')
         self.button_stop.grid(row=2, column=1, sticky='we')
+
+        ## Stepper frame
+        self.button_to_mouse = ttk.Button(frame_stepper, text = '<', command=lambda: ser_write(self.ser, code_step_forward))
+        self.button_to_home = ttk.Button(frame_stepper, text = '>', command=lambda: ser_write(self.ser, code_step_backward))
+        ttk.Label(frame_stepper, text='Move stepper', anchor='center').grid(row=0, column=0, columnspan=2, sticky='we')
+        self.button_to_mouse.grid(row=1, column=0, sticky='e')
+        self.button_to_home.grid(row=1, column=1, sticky='w')
+
+        self.button_to_mouse['state'] = 'disabled'
+        self.button_to_home['state'] = 'disabled'
         
         ###### GUI OBJECTS ORGANIZED BY TIME ACTIVE ######
         # List of components to disable at open
         self.obj_to_disable_at_open = [
-            self.option_ports,
-            self.button_update_ports,
-            self.button_open_port,
             self.entry_pre_session,
             self.entry_post_session,
             self.entry_trial_num,
             self.entry_trial_dur,
+            self.entry_iti,
+            self.check_image_all,
+            self.entry_image_ttl_dur,
             self.entry_track_period,
-            self.entry_track_steps,
-            self.check_print
+            self.option_ports,
+            self.button_update_ports,
+            self.button_open_port,
         ]
         # Boolean of objects in list above that should be enabled when time...
         self.obj_enabled_at_open = [False] * len(self.obj_to_disable_at_open)
         
         self.obj_to_enable_at_open = [
             self.button_close_port,
-            self.button_start
+            self.button_start,
+            self.button_to_mouse,
+            self.button_to_home,
         ]
         self.obj_to_disable_at_start = [
             self.button_close_port,
-            self.entry_save,
+            self.check_print,
+            self.entry_file,
             self.button_save_file,
             self.button_start,
             self.button_slack
@@ -308,7 +335,6 @@ class InputManager(tk.Frame):
         self.entry_iti.insert(0, 60000)
         self.entry_image_ttl_dur.insert(0, 100)
         self.entry_track_period.insert(0, 50)
-        self.entry_track_steps.insert(0, 5)
         self.entry_serial_status.insert(0, 'Closed')
         self.entry_serial_status['state'] = 'normal'
         self.entry_serial_status['state'] = 'readonly'
@@ -320,7 +346,7 @@ class InputManager(tk.Frame):
         self.parameters = collections.OrderedDict()
         self.ser = serial.Serial(timeout=1, baudrate=9600)
         self.counter = {}
-        self.q = Queue()
+        self.q_serial = Queue()
         self.gui_update_ct = 0  # count number of times GUI has been updated
 
     def update_ports(self):
@@ -350,8 +376,8 @@ class InputManager(tk.Frame):
                 ('All files', '*.*')
             ]
         )
-        self.entry_save.delete(0, 'end')
-        self.entry_save.insert(0, save_file)
+        self.entry_file.delete(0, 'end')
+        self.entry_file.insert(0, save_file)
 
     def gui_util(self, option):
         ''' Updates GUI components
@@ -412,7 +438,7 @@ class InputManager(tk.Frame):
             self.entry_serial_status.insert(0, 'Closed')
             self.entry_serial_status['state'] = 'readonly'
 
-    def open_serial(self, delay=3, timeout=5):
+    def open_serial(self, delay=3, timeout=5, code_params='D'):
         ''' Open serial connection to Arduino
         Executes when 'Open' is pressed
         '''
@@ -441,7 +467,7 @@ class InputManager(tk.Frame):
         # Handle opening message from serial
         if self.var_print_arduino.get():
             while self.ser.in_waiting:
-                sys.stdout.write(arduino_head + self.ser.readline())
+                sys.stdout.write(arduino_head + ser_readline(self.ser))
         else:
             self.ser.flushInput()
 
@@ -455,12 +481,11 @@ class InputManager(tk.Frame):
         self.parameters['img_all'] = int(self.var_image_all.get())
         self.parameters['img_ttl_dur'] = int(self.entry_image_ttl_dur.get())
         self.parameters['track_period'] = int(self.entry_track_period.get())
-        self.parameters['track_steps'] = int(self.entry_track_steps.get())
 
         # Send parameters and make sure it's processed
         values = self.parameters.values()
         if self.var_verbose.get(): print('Sending parameters: {}'.format(values))
-        self.ser.write('+'.join(str(s) for s in values))
+        ser_write(self.ser, code_params + '+'.join(str(s) for s in values))
 
         start_time = time.time()
         while 1:
@@ -468,7 +493,7 @@ class InputManager(tk.Frame):
                 if self.var_print_arduino.get():
                     # Print incoming data
                     while self.ser.in_waiting:
-                        sys.stdout.write(arduino_head + self.ser.readline())
+                        sys.stdout.write(arduino_head + ser_readline(self.ser))
                 print('Parameters uploaded to Arduino')
                 print('Ready to start')
                 return
@@ -485,22 +510,19 @@ class InputManager(tk.Frame):
         self.gui_util('close')
         print('Connection to Arduino closed.')
     
-    def start(self):
+    def start(self, code_start='E'):
         self.gui_util('start')
 
         # Clear Queues
-        for q in [self.q]:
+        for q in [self.q_serial]:
             with q.mutex:
                 q.queue.clear()
 
-        session_length = self.parameters['pre_session'] + self.parameters['post_session'] + self.parameters['iti'] * self.parameters['trial_num']
-        nstepframes = 2 * session_length / float(self.entry_track_period.get())
-
         # Create data file
-        if self.entry_save.get():
+        if self.entry_file.get():
             try:
                 # Create file if it doesn't already exist ('x' parameter)
-                self.data_file = h5py.File(self.entry_save.get(), 'x')
+                self.data_file = h5py.File(self.entry_file.get(), 'x')
             except IOError:
                 tkMessageBox.showerror('File error', 'Could not create file to save data.')
                 self.gui_util('stop')
@@ -514,38 +536,41 @@ class InputManager(tk.Frame):
             filename = 'data/data-' + now.strftime('%y%m%d-%H%M%S') + '.h5'
             self.data_file = h5py.File(filename, 'x')
 
-        self.behav_grp = self.data_file.create_group('behavior')
-        self.behav_grp.create_dataset(name='trials', dtype='uint32',
-            shape=(1000, ), chunks=(1, ))
-        self.behav_grp.create_dataset(name='trial_manual', dtype=bool,
-            shape=(1000, ), chunks=(1, ))
-        self.behav_grp.create_dataset(name='rail_leave', dtype='uint32',
-            shape=(1000, ), chunks=(1, ))
-        self.behav_grp.create_dataset(name='rail_home', dtype='uint32',
-            shape=(1000, ), chunks=(1, ))
-        self.behav_grp.create_dataset(name='steps', dtype='int32',
-            shape=(2, int(nstepframes) * 1.1), chunks=(2, 1))
-        self.behav_grp.create_dataset(name='track', dtype='int32',
-            shape=(2, int(nstepframes) * 1.1), chunks=(2, 1))
+        n_trials = self.parameters['trial_num']
+        session_length = self.parameters['pre_session'] + self.parameters['post_session'] + self.parameters['iti'] * self.parameters['trial_num']
+        nstepframes = int(2 * session_length / float(self.entry_track_period.get()))
+        chunks = (2, 1)
+
+        self.grp_behav = self.data_file.create_group('behavior')
+        self.grp_behav.create_dataset(name='at_mouse', dtype='uint32',
+            shape=(2, n_trials, ), chunks=chunks)
+        self.grp_behav.create_dataset(name='to_mouse', dtype='uint32',
+            shape=(2, n_trials, ), chunks=chunks)
+        self.grp_behav.create_dataset(name='at_home', dtype='uint32',
+            shape=(2, n_trials, ), chunks=chunks)
+        self.grp_behav.create_dataset(name='movement', dtype='int32',
+            shape=(2, nstepframes), chunks=chunks)
+
+        self.counter = {ev: 0 for ev in events}
 
         # Store session parameters into behavior group
-        for key, value in self.parameters.iteritems():
-            self.behav_grp.attrs[key] = value
+        for key, value in self.parameters.items():
+            self.grp_behav.attrs[key] = value
 
         # Create thread to scan serial
         thread_scan = threading.Thread(
             target=scan_serial,
-            args=(self.q, self.ser, self.var_print_arduino.get())
+            args=(self.q_serial, self.ser, self.var_print_arduino.get())
         )
 
         # Run session
         start_time = datetime.now()
         self.start_time = start_time.strftime('%H:%M:%S')
         print('Session start ~ {}'.format(self.start_time))
-        self.behav_grp.attrs['start_time'] = self.start_time
+        self.grp_behav.attrs['start_time'] = self.start_time
 
         self.ser.flushInput()                                   # Remove data from serial input
-        self.ser.write('E')                                     # Start signal for Arduino
+        ser_write(self.ser, code_start)                                     # Start signal for Arduino
         thread_scan.start()
 
         # Update GUI
@@ -557,88 +582,76 @@ class InputManager(tk.Frame):
 
         refresh_rate = 10  # Rate to update GUI. Should be faster than data coming in, eg tracking rate
 
+        # Code-event dictionary
+        event = {
+            code_at_mouse: 'at_mouse',
+            code_to_mouse: 'to_mouse',
+            code_at_home: 'at_home',
+            code_move: 'movement',
+        }
+
         # End on 'Stop' button (by user)
         if self.var_stop.get():
             self.var_stop.set(False)
-            self.ser.write('0')
+            ser_write(self.ser, '0')
             print('User triggered stop.')
 
         # Incoming queue has format:
         #   [code, ts [, extra values...]]
-        while not self.q.empty():
-            q_in = self.q.get()
-            code = q_in[0]
-            ts = q_in[1]
+        while not self.q_serial.empty():
+            code, ts, data = self.q_serial.get()
 
             # stop_session is called only when Arduino sends stop code
             if code == code_end:
-                arduino_end = ts
                 print('Stopping session.')
-                self.stop_session(arduino_end)
+                self.stop_session(arduino_end=ts)
                 return
 
-            elif code == code_trial_start:
-                manual = bool(q_in[2])
-
-                self.behav_grp['trials'][self.counter['trial']] = ts
-                self.behav_grp['trial_manual'][self.counter['trial']] = manual
-
-            elif code == code_rail_leave:
-                self.behav_grp['rail_leave'][self.counter['trial']] = ts
-
-            elif code == code_rail_home:
-                self.behav_grp['rail_home'][self.counter['trial']] = ts
-                self.counter['trial'] += 1
-
-            elif code == code_steps:
-                dist = int(q_in[2])
-
-                # Record tracking
-                self.behav_grp['steps'][:, self.counter['steps']] = [ts, dist]
-                self.counter['steps'] += 1
-
-            elif code == code_track:
-                dist = int(q_in[2])
-
-                # Record tracking
-                self.behav_grp['track'][:, self.counter['track']] = [ts, dist]
-
-                # Increment counter
-                self.counter['track'] += 1
+            # Record event
+            if code not in [8]:
+                self.grp_behav[event[code]][:, self.counter[event[code]]] = [ts, data]
+                self.counter[event[code]] += 1
 
         self.parent.after(refresh_rate, self.update_session)
 
     def stop_session(self, frame_cutoff=None, arduino_end=None):
+        '''Finalize session
+        Closes hardware connections and saves HDF5 data file. Resets GUI.
+        '''
         end_time = datetime.now().strftime('%H:%M:%S')
         print('Session ended at ' + end_time)
         self.gui_util('stop')
         self.close_serial()
 
-        if self.data_file:
-            print('Writing behavioral data')
-            self.behav_grp.attrs['end_time'] = end_time
-            self.behav_grp['trials'].resize((self.counter['trial'], ))
-            self.behav_grp['trial_manual'].resize((self.counter['trial'], ))
-            self.behav_grp['rail_leave'].resize((self.counter['trial'], ))
-            self.behav_grp['rail_home'].resize((self.counter['trial'], ))
-            self.behav_grp['steps'].resize((2, self.counter['steps']))
-            self.behav_grp['track'].resize((2, self.counter['track']))
-            self.behav_grp.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
-            self.behav_grp.attrs['arduino_end'] = arduino_end
+        print('Writing behavioral data into HDF5 group {}'.format(self.grp_behav.name))
+        self.grp_behav.attrs['end_time'] = end_time
+        self.grp_behav.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
+        self.grp_behav.attrs['arduino_end'] = arduino_end
 
-            # Close HDF5 file object
-            print('Closing file')
-            self.data_file.close()
+        for ev in events:
+            self.grp_behav[ev].resize((2, self.counter[ev]))
+
+        # Close HDF5 file object
+        print('Closing {}'.format(self.data_file.filename))
+        self.data_file.close()
         
-        # Clear self.parameters
-        self.parameters = collections.OrderedDict()
-
+        # Slack that session is done
+        if self.entry_slack.get():
+            slack_msg(self.entry_slack.get(), 'Session ended')
         print('All done!')
 
-        # Slack that session is done.
-        if (self.entry_slack.get() and \
-            slack):
-            slack_msg(self.entry_slack.get(), 'Session ended.')
+
+def ser_write(ser, code):
+    if not is_py2:
+        if type(code) is not bytes: code = code.encode()
+    ser.write(code)
+
+
+def ser_readline(ser):
+    if is_py2:
+        return ser.readline()
+    else:
+        return ser.readline().decode()
 
 
 def slack_msg(slack_recipient, msg, test=False, verbose=False):
@@ -672,7 +685,7 @@ def scan_serial(q_serial, ser, print_arduino=False, suppress=[]):
 
     if print_arduino: print('  Scanning Arduino outputs.')
     while 1:
-        input_arduino = ser.readline()
+        input_arduino = ser_readline(ser)
         if not input_arduino: continue
 
         try:
