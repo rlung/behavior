@@ -9,6 +9,9 @@ For use with the Adafruit Motor Shield v2
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 
+const int pin_forward = 2;
+const int pin_backward = 3;
+
 // Create the motor shield object with the default I2C address
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
@@ -17,10 +20,13 @@ Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 2);
 
 
 void setup() {
+  pinMode(pin_forward, INPUT);
+  pinMode(pin_backward, INPUT);
   Serial.begin(9600);
   AFMS.begin();
   myMotor -> setSpeed(50);
-  Serial.println("Motor slave\nTell me what to do:");
+  
+  Serial.println("Motor slave");
   Serial.println("  0: stop");
   Serial.println("  1: move forward");
   Serial.println("  2: move backward");
@@ -28,17 +34,10 @@ void setup() {
 
 
 void loop() {
-  static int move;
-
-  if (Serial.available()) {
-    byte input = Serial.read();
-    if (input == '1') move = 1;
-    else if (input == '0') move = 0;
-    else if (input == '2') move = -1;
+  if (digitalRead(pin_forward)) {
+    myMotor -> step(5, FORWARD, DOUBLE);
   }
-
-  if (move) {
-    if (move < 0 ) myMotor -> step(5, FORWARD, DOUBLE);
-    else if (move > 0) myMotor -> step(5, BACKWARD, DOUBLE);
+  else if (digitalRead(pin_backward)) {
+    myMotor -> step(5, BACKWARD, DOUBLE);
   }
 }
