@@ -9,16 +9,16 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 210 297"
+   width="450"
+   height="450"
+   viewBox="0 0 119.0625 119.0625"
    version="1.1"
    id="svg8"
    inkscape:version="0.92.1 r15371"
    sodipodi:docname="folder.svg"
-   inkscape:export-filename="D:\Dropbox (Stuber Lab)\behavior\essentials\tkinter\images\folder_small.png"
-   inkscape:export-xdpi="3.6365101"
-   inkscape:export-ydpi="3.6365101">
+   inkscape:export-filename="C:\Users\randa\Dropbox (Stuber Lab)\behavior\essentials\tkinter\images\folder_12.png"
+   inkscape:export-xdpi="2.5599999"
+   inkscape:export-ydpi="2.5599999">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -28,9 +28,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8"
-     inkscape:cx="178.87989"
-     inkscape:cy="742.73688"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="64.206469"
+     inkscape:cy="303.82395"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -47,11 +47,12 @@
      inkscape:snap-center="true"
      inkscape:snap-text-baseline="true"
      inkscape:snap-page="true"
-     inkscape:window-width="3840"
-     inkscape:window-height="2066"
-     inkscape:window-x="-11"
-     inkscape:window-y="-11"
-     inkscape:window-maximized="1" />
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     units="px" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -67,11 +68,11 @@
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
-     id="layer1">
+     id="layer1"
+     transform="translate(0,-177.9375)">
     <path
-       style="opacity:1;fill:#4f4f4f;fill-opacity:1;stroke:none;stroke-width:1.99936998;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.34117648"
-       d="m 170,313.94922 c -7.51854,0.0167 -13.57227,6.05176 -13.57227,13.57031 v 36.42774 9.28711 243.57031 c 0,7.51857 6.0537,13.57226 13.57227,13.57226 h 390 c 7.51857,0 13.57227,-6.05369 13.57227,-13.57226 V 363.94727 c 0,-7.51858 -6.0537,-13.56339 -13.57227,-13.57032 H 366.25084 L 351.07227,320.1981 c -3.37826,-6.71684 -12.83944,-6.62273 -20.35799,-6.60602 z"
-       transform="scale(0.26458333)"
+       style="opacity:1;fill:#4f4f4f;fill-opacity:1;stroke:none;stroke-width:0.52899998;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.34117647"
+       d="m 7.937498,195.65556 c -1.98928,0.004 -3.590996,1.6012 -3.590996,3.59048 v 9.63817 2.45722 64.44464 c 0,1.98929 1.601708,3.59099 3.590996,3.59099 H 111.125 c 1.98929,0 3.591,-1.6017 3.591,-3.59099 v -66.90186 c 0,-1.98929 -1.60171,-3.58864 -3.591,-3.59048 H 59.862199 l -4.015997,-7.98482 c -0.893831,-1.77716 -3.397102,-1.75226 -5.386385,-1.74784 z"
        id="rect4485"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="ssccsssssscsss" />
