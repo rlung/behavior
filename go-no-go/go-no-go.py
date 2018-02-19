@@ -90,7 +90,7 @@ opts_entry10 = dict(opts_entry, **{'width': 10, 'justify': 'right'})
 opts_button = {}
 opts_button_grid = {'padx': 2}
 
-opts_frame_sep = {'padx': 50, 'pady': 15, }
+opts_sep = {'padx': 50, 'pady': 15, }
 opts_frame0 = {'pady': 15, }
 opts_frame1 = {'padx': 15, 'pady': 5, }
 opts_frame2 = {'padx': 5, }
@@ -349,13 +349,12 @@ class InputManager(ttk.Frame):
         frame_start.grid_columnconfigure(0, weight=1)
         frame_start.grid_columnconfigure(1, weight=1)
 
-        ## Separator frame
-        frame_sep = tk.Frame(parent, height=1, bg='gray')
-        frame_sep.grid(row=1, column=0, sticky='we', **opts_frame_sep)
+        ## Separator
+        ttk.Separator(parent).grid(row=1, column=0, sticky='we', **opts_sep)
 
         ## Monitor frame
         frame_monitor = ttk.Frame(parent)
-        frame_monitor.grid(row=2, column=0, **opts_frame_sep)
+        frame_monitor.grid(row=2, column=0, **opts_frame0)
         frame_monitor_col0 = ttk.Frame(frame_monitor)
         frame_monitor_col1 = ttk.Frame(frame_monitor)
         frame_monitor_col2 = ttk.Frame(frame_monitor)
@@ -368,10 +367,10 @@ class InputManager(ttk.Frame):
         frame_sol.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_sol.grid_columnconfigure(0, weight=1)  # Fills into frame
 
-        ### Cue frame
-        frame_cue = ttk.Frame(frame_monitor_col1)
-        frame_cue.grid(row=0, column=1, sticky='we', **opts_frame1)
-        frame_cue.grid_columnconfigure(0, weight=1)
+        ### CS frame
+        frame_cs = ttk.Frame(frame_monitor_col1)
+        frame_cs.grid(row=0, column=1, sticky='we', **opts_frame1)
+        frame_cs.grid_columnconfigure(0, weight=1)
 
         ### Next trial frame
         frame_next = ttk.Frame(frame_monitor_col2)
@@ -587,17 +586,17 @@ class InputManager(ttk.Frame):
         self.button_sol2_trig['state'] = 'disabled'
 
         # frame_cs
-        self.button_cs0 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs0))
-        self.button_cs1 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs1))
-        self.button_cs2 = ttk.Button(frame_cue, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs2))
-        tk.Label(frame_cue, text='Trig', anchor='center').grid(row=0, column=1, sticky='we')
-        tk.Label(frame_cue, text='CS0', anchor='center').grid(row=2, column=0, sticky='we')
-        tk.Label(frame_cue, text='CS1', anchor='center').grid(row=3, column=0, sticky='we')
-        tk.Label(frame_cue, text='CS2', anchor='center').grid(row=4, column=0, sticky='we')
+        self.button_cs0 = ttk.Button(frame_cs, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs0))
+        self.button_cs1 = ttk.Button(frame_cs, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs1))
+        self.button_cs2 = ttk.Button(frame_cs, text=u'\u25B6', width=3, command=lambda: ser_write(self.ser, code_cs2))
+        tk.Label(frame_cs, text='Trig', anchor='center').grid(row=0, column=1, sticky='we')
+        tk.Label(frame_cs, text='CS0: ', anchor='e').grid(row=2, column=0, sticky='we')
+        tk.Label(frame_cs, text='CS1: ', anchor='e').grid(row=3, column=0, sticky='we')
+        tk.Label(frame_cs, text='CS2: ', anchor='e').grid(row=4, column=0, sticky='we')
         self.button_cs0.grid(row=2, column=1, sticky='we', **opts_button_grid)
         self.button_cs1.grid(row=3, column=1, sticky='we', **opts_button_grid)
         self.button_cs2.grid(row=4, column=1, sticky='we', **opts_button_grid)
-        tk.Button(frame_cue, relief='flat', state='disabled').grid(row=1, column=1, **opts_button_grid)
+        tk.Button(frame_cs, relief='flat', state='disabled').grid(row=1, column=1, **opts_button_grid)
 
         self.button_cs0['state'] = 'disabled'
         self.button_cs1['state'] = 'disabled'
