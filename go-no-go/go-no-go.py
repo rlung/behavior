@@ -17,6 +17,8 @@ Packages needed:
 
 TODO:
 - CS names
+- scoreboard
+- link variable to ttk.Entry's
 
 '''
 
@@ -87,16 +89,12 @@ opts_entry10 = dict(opts_entry, **{'width': 10, 'justify': 'right'})
 opts_button = {}
 opts_button_grid = {'padx': 2}
 
-opts_radio = {}
-opts_check = {}
-
 opts_frame_sep = {'padx': 50, 'pady': 15, }
 opts_frame0 = {'pady': 15, }
 opts_frame1 = {'padx': 15, 'pady': 5, }
 opts_frame2 = {'padx': 5, }
 
-
-# Serial codes
+# Serial input codes
 code_end = 0;
 code_lick = 1;
 code_lick_form = 9;
@@ -108,22 +106,24 @@ code_us_start = 6;
 code_response = 7;
 code_next_trial = 8;
 
+# Serial output codes
 # Should do following as byte in decimal form...
-code_vac_on = '1'  # bytes([49])
-code_vac_off = '2'  # bytes([50])
-code_vac_trig = '3'  # bytes([51])
-code_sol0_on = '4'  # bytes([52])
-code_sol0_off = '5'  # bytes([53])
-code_sol0_trig = '6'  # bytes([54])
-code_sol1_on = '7'  # bytes([55])
-code_sol1_off = '8'  # bytes([56])
-code_sol1_trig = '9'  # bytes([57])
-code_sol2_on =  ':'  #bytes([58])
-code_sol2_off =  ';'  #bytes([59])
-code_sol2_trig =  '<'  #bytes([60])
-code_cs0 = '='  # bytes([61])
-code_cs1 = '>'  # bytes([62])
-code_cs2 = '?'  # bytes([63])
+# Except wouldn't be backward compatible...
+code_vac_on = '1'       # bytes([49])
+code_vac_off = '2'      # bytes([50])
+code_vac_trig = '3'     # bytes([51])
+code_sol0_on = '4'      # bytes([52])
+code_sol0_off = '5'     # bytes([53])
+code_sol0_trig = '6'    # bytes([54])
+code_sol1_on = '7'      # bytes([55])
+code_sol1_off = '8'     # bytes([56])
+code_sol1_trig = '9'    # bytes([57])
+code_sol2_on = ':'      # bytes([58])
+code_sol2_off = ';'     # bytes([59])
+code_sol2_trig = '<'    # bytes([60])
+code_cs0 = '='          # bytes([61])
+code_cs1 = '>'          # bytes([62])
+code_cs2 = '?'          # bytes([63])
 
 # Events to record
 events = [
@@ -282,6 +282,7 @@ class InputManager(ttk.Frame):
         frame_arduino2 = ttk.Frame(frame_arduino)
         frame_arduino1.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_arduino2.grid(row=1, column=0, sticky='we', **opts_frame1)
+        frame_arduino1.grid_columnconfigure(0, weight=1)
         frame_arduino2.grid_columnconfigure(0, weight=1)
         frame_arduino2.grid_columnconfigure(1, weight=1)
         frame_arduino.grid_columnconfigure(0, weight=1)
@@ -291,7 +292,7 @@ class InputManager(ttk.Frame):
         frame_debug.grid(row=2, column=0, sticky='we', **opts_frame1)
         frame_debug.grid_columnconfigure(0, weight=1)
 
-        ### Notes frame
+        ### Info frame
         frame_info = ttk.Frame(frame_setup_col2)
         frame_info.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_info.grid_columnconfigure(0, weight=1)
@@ -334,6 +335,11 @@ class InputManager(ttk.Frame):
         frame_cue.grid(row=0, column=1, sticky='we', **opts_frame1)
         frame_cue.grid_columnconfigure(0, weight=1)
 
+        ### Next trial frame
+        frame_next = ttk.Frame(frame_monitor)
+        frame_next.grid(row=0, column=2, sticky='we', **opts_frame1)
+        frame_next.grid_columnconfigure(0, weight=1)
+
         # Add GUI components
 
         ## frame_params
@@ -353,11 +359,11 @@ class InputManager(ttk.Frame):
         self.entry_cs0_num = ttk.Entry(frame_session, **opts_entry10)
         self.entry_cs1_num = ttk.Entry(frame_session, **opts_entry10)
         self.entry_cs2_num = ttk.Entry(frame_session, **opts_entry10)
-        tk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
-        tk.Label(frame_session, text='Number of CS1: ', anchor='e').grid(row=3, column=0, sticky='e')
-        tk.Label(frame_session, text='Number of CS2: ', anchor='e').grid(row=4, column=0, sticky='e')
+        ttk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+        ttk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        ttk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
+        ttk.Label(frame_session, text='Number of CS1: ', anchor='e').grid(row=3, column=0, sticky='e')
+        ttk.Label(frame_session, text='Number of CS2: ', anchor='e').grid(row=4, column=0, sticky='e')
         self.entry_pre_session.grid(row=0, column=1, sticky='w')
         self.entry_post_session.grid(row=1, column=1, sticky='w')
         self.entry_cs0_num.grid(row=2, column=1, sticky='w')
@@ -375,12 +381,12 @@ class InputManager(ttk.Frame):
 
         ### frame_misc
         ### UI for other things.
-        self.check_image_all = ttk.Checkbutton(frame_misc, variable=self.var_image_all, **opts_check)
+        self.check_image_all = ttk.Checkbutton(frame_misc, variable=self.var_image_all)
         self.entry_image_ttl_dur = ttk.Entry(frame_misc, **opts_entry10)
         self.entry_track_period = ttk.Entry(frame_misc, **opts_entry10)
-        tk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
+        ttk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
+        ttk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+        ttk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
         self.check_image_all.grid(row=0, column=1, sticky='w')
         self.entry_image_ttl_dur.grid(row=1, column=1, sticky='w')
         self.entry_track_period.grid(row=2, column=1, sticky='w')
@@ -421,6 +427,10 @@ class InputManager(ttk.Frame):
         self.button_open_port.grid(row=0, column=0, sticky='we', **opts_button_grid)
         self.button_close_port.grid(row=0, column=1, sticky='we', **opts_button_grid)
 
+        icon_refresh = ImageTk.PhotoImage(file='graphics/refresh.png')
+        self.button_update_ports.config(image=icon_refresh)
+        self.button_update_ports.image = icon_refresh
+
         self.entry_serial_status.insert(0, 'Closed')
         self.entry_serial_status['state'] = 'normal'
         self.entry_serial_status['state'] = 'readonly'
@@ -428,10 +438,10 @@ class InputManager(ttk.Frame):
 
         ## frame_debug
         ## UI for debugging options.
-        self.check_verbose = ttk.Checkbutton(frame_debug, text='Verbose', variable=self.var_verbose, **opts_check)
-        self.check_print_arduino = ttk.Checkbutton(frame_debug, text='Print Arduino serial', variable=self.var_print_arduino, **opts_check)
-        self.check_suppress_print_lick_form = ttk.Checkbutton(frame_debug, text='Suppress lick output', variable=self.var_suppress_print_lick_form, **opts_check)
-        self.check_suppress_print_movement = ttk.Checkbutton(frame_debug, text='Suppress movement output', variable=self.var_suppress_print_movement, **opts_check)
+        self.check_verbose = ttk.Checkbutton(frame_debug, text='Verbose', variable=self.var_verbose)
+        self.check_print_arduino = ttk.Checkbutton(frame_debug, text='Print Arduino serial', variable=self.var_print_arduino)
+        self.check_suppress_print_lick_form = ttk.Checkbutton(frame_debug, text='Suppress lick output', variable=self.var_suppress_print_lick_form)
+        self.check_suppress_print_movement = ttk.Checkbutton(frame_debug, text='Suppress movement output', variable=self.var_suppress_print_movement)
         self.check_verbose.grid(row=0, column=0, sticky='w')
         self.check_print_arduino.grid(row=1, column=0, sticky='w')
         self.check_suppress_print_lick_form.grid(row=2, column=0, sticky='w')
@@ -441,7 +451,7 @@ class InputManager(ttk.Frame):
         ## UI for session info.
         self.entry_subject = ttk.Entry(frame_info, **opts_entry)
         self.entry_weight = ttk.Entry(frame_info, **opts_entry)
-        self.scrolled_notes = ScrolledText(frame_info, width=20, height=15, relief='flat')
+        self.scrolled_notes = ScrolledText(frame_info, width=20, height=15)
         tk.Label(frame_info, text="Subject: ").grid(row=0, column=0, sticky='e')
         tk.Label(frame_info, text="Weight: ").grid(row=1, column=0, sticky='e')
         tk.Label(frame_info, text="Notes: ").grid(row=2, column=0, columnspan=2, sticky='w')
@@ -458,7 +468,7 @@ class InputManager(ttk.Frame):
         self.button_find_file.grid(row=1, column=1, sticky='e', **opts_button_grid)
 
         ### Add icon to folder
-        icon_folder = ImageTk.PhotoImage(file='icon_folder.png')
+        icon_folder = ImageTk.PhotoImage(file='graphics/folder.png')
         self.button_find_file.config(image=icon_folder)
         self.button_find_file.image = icon_folder  #Keeping a reference to the image
 
@@ -471,7 +481,7 @@ class InputManager(ttk.Frame):
         self.button_slack.grid(row=1, column=1, sticky='e', **opts_button_grid)
 
         ### Add icon to folder
-        icon_slack = ImageTk.PhotoImage(file='icon_slack.png')
+        icon_slack = ImageTk.PhotoImage(file='graphics/slack.png')
         self.button_slack.config(image=icon_slack)
         self.button_slack.image = icon_slack
 
@@ -550,6 +560,11 @@ class InputManager(ttk.Frame):
         self.button_cs0['state'] = 'disabled'
         self.button_cs1['state'] = 'disabled'
         self.button_cs2['state'] = 'disabled'
+
+        # frame_next
+        self.text_next_time = tk.Text(frame_next, width=10, height=1, relief='flat')
+        self.text_next_time.grid()
+        self.text_next_time.insert(0.0, '--')
 
         ## Group GUI objects
         self.obj_to_disable_at_open = [
@@ -1254,9 +1269,9 @@ class InputManager(ttk.Frame):
         # Start session
         ser_write(self.ser, code_start)
         thread_scan.start()
-        start_time = datetime.now().time()
-        print('Session started at {}'.format(start_time))
-        self.grp_exp.attrs['start_time'] = str(start_time)
+        self.start_time = datetime.now().time()
+        print('Session started at {}'.format(self.start_time))
+        self.grp_exp.attrs['start_time'] = str(self.start_time)
 
         # Update GUI
         self.update_session()
@@ -1309,6 +1324,13 @@ class InputManager(ttk.Frame):
             if code not in [8]:
                 self.grp_behav[event[code]][:, self.counter[event[code]]] = [ts, data]
                 self.counter[event[code]] += 1
+
+            # Update GUI
+            if code == code_next_trial:
+                self.text_next_time.delete(0.0, 'end')
+                self.text_next_type.delete(0.0, 'end')
+                self.text_next_time.insert(0.0, self.start_time + datetime.timedelta(microseconds=ts))
+                self.text_next_type.insert(0.0, data)
 
         self.parent.after(refresh_rate, self.update_session)
 
