@@ -9,7 +9,7 @@ Data from hardware is routed directly back via serial connection to Python
 GUI for recording and calculations.
 
 Example input:
-0,0,5,5000,30000,0,100,50
+D0,0,5,5000,30000,0,100,50
 
 */
 
