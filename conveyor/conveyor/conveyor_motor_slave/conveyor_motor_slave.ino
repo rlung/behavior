@@ -27,9 +27,8 @@ void setup() {
   myMotor -> setSpeed(50);
   
   Serial.println("Motor slave");
-  Serial.println("  0: stop");
-  Serial.println("  1: move forward");
-  Serial.println("  2: move backward");
+  Serial.println("  pin 2: move forward");
+  Serial.println("  pin 3: move backward");
 }
 
 
