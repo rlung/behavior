@@ -19,6 +19,8 @@ TODO:
 - CS names
 - scoreboard
 - link variable to ttk.Entry's
+- set up threads as daemons
+- update button for parameters closes window
 
 '''
 
@@ -49,8 +51,7 @@ import serial
 import serial.tools.list_ports
 import threading
 import time
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 import os
 import sys
 import h5py
@@ -170,6 +171,12 @@ class InputManager(ttk.Frame):
         parent.columnconfigure(0, weight=1)   # centers frame (also fills col, but that's automatic being the only row)
 
         # Variables
+        self.var_presession = tk.IntVar()
+        self.var_postsession = tk.IntVar()
+        self.var_cs0_num = tk.IntVar()
+        self.var_cs1_num = tk.IntVar()
+        self.var_cs2_num = tk.IntVar()
+        self.var_presession = tk.IntVar()
         self.var_session_type = tk.IntVar()
         self.var_iti_distro = tk.IntVar()
         self.var_mean_iti = tk.IntVar()
@@ -207,8 +214,29 @@ class InputManager(ttk.Frame):
         self.var_print_arduino = tk.BooleanVar()
         self.var_suppress_print_lick_form = tk.BooleanVar()
         self.var_suppress_print_movement = tk.BooleanVar()
+        self.var_file = tk.StringVar()
+        self.var_slack_address = tk.StringVar()
+        self.var_counter_lick = tk.IntVar()
+        self.var_counter_lick_form = tk.IntVar()
+        self.var_counter_lick_onset = tk.IntVar()
+        self.var_counter_movement = tk.IntVar()
+        self.var_counter_trial_start = tk.IntVar()
+        self.var_counter_trial_signal = tk.IntVar()
+        self.var_counter_cs = tk.IntVar()
+        self.var_counter_cs0 = tk.IntVar()
+        self.var_counter_cs1 = tk.IntVar()
+        self.var_counter_cs2 = tk.IntVar()
+        self.var_counter_us = tk.IntVar()
+        self.var_counter_response = tk.IntVar()
+        self.var_next_trial_time = tk.StringVar()
+        self.var_next_trial_type = tk.StringVar()
 
         # Default variable values
+        self.var_presession.set(60000)
+        self.var_postsession.set(60000)
+        self.var_cs0_num.set(20)
+        self.var_cs1_num.set(20)
+        self.var_cs2_num.set(0)
         self.var_session_type.set(0)
         self.var_iti_distro.set(1)
         self.var_mean_iti.set(60000)
@@ -242,6 +270,12 @@ class InputManager(ttk.Frame):
         self.var_image_all.set(0)
         self.var_image_ttl_dur.set(100)
         self.var_track_period.set(50)
+        self.var_next_trial_time.set('--')
+        self.var_next_trial_type.set('--')
+        self.var_counter_cs0.set(0)
+        self.var_counter_cs1.set(0)
+        self.var_counter_cs2.set(0)
+        self.var_counter_lick_onset.set(0)
 
         # Lay out GUI
 
@@ -322,23 +356,32 @@ class InputManager(ttk.Frame):
         ## Monitor frame
         frame_monitor = ttk.Frame(parent)
         frame_monitor.grid(row=2, column=0, **opts_frame_sep)
-        frame_setup_col0 = ttk.Frame(frame_monitor)
-        frame_setup_col0.grid(row=0, column=0, sticky='we')
+        frame_monitor_col0 = ttk.Frame(frame_monitor)
+        frame_monitor_col1 = ttk.Frame(frame_monitor)
+        frame_monitor_col2 = ttk.Frame(frame_monitor)
+        frame_monitor_col0.grid(row=0, column=0, sticky='we')
+        frame_monitor_col1.grid(row=0, column=1, sticky='we')
+        frame_monitor_col2.grid(row=0, column=2, sticky='we')
 
         ### Solenoid frame
-        frame_sol = ttk.Frame(frame_monitor)
+        frame_sol = ttk.Frame(frame_monitor_col0)
         frame_sol.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_sol.grid_columnconfigure(0, weight=1)  # Fills into frame
 
         ### Cue frame
-        frame_cue = ttk.Frame(frame_monitor)
+        frame_cue = ttk.Frame(frame_monitor_col1)
         frame_cue.grid(row=0, column=1, sticky='we', **opts_frame1)
         frame_cue.grid_columnconfigure(0, weight=1)
 
         ### Next trial frame
-        frame_next = ttk.Frame(frame_monitor)
+        frame_next = ttk.Frame(frame_monitor_col2)
         frame_next.grid(row=0, column=2, sticky='we', **opts_frame1)
         frame_next.grid_columnconfigure(0, weight=1)
+
+        ### Counter
+        frame_count = ttk.Frame(frame_monitor_col2)
+        frame_count.grid(row=1, column=2, sticky='we', **opts_frame1)
+        frame_count.grid_columnconfigure(0, weight=1)
 
         # Add GUI components
 
@@ -354,11 +397,11 @@ class InputManager(ttk.Frame):
 
         ### frame_session
         ### UI for session.
-        self.entry_pre_session = ttk.Entry(frame_session, **opts_entry10)
-        self.entry_post_session = ttk.Entry(frame_session, **opts_entry10)
-        self.entry_cs0_num = ttk.Entry(frame_session, **opts_entry10)
-        self.entry_cs1_num = ttk.Entry(frame_session, **opts_entry10)
-        self.entry_cs2_num = ttk.Entry(frame_session, **opts_entry10)
+        self.entry_pre_session = ttk.Entry(frame_session, textvariable=self.var_presession, **opts_entry10)
+        self.entry_post_session = ttk.Entry(frame_session, textvariable=self.var_postsession, **opts_entry10)
+        self.entry_cs0_num = ttk.Entry(frame_session, textvariable=self.var_cs0_num, **opts_entry10)
+        self.entry_cs1_num = ttk.Entry(frame_session, textvariable=self.var_cs1_num, **opts_entry10)
+        self.entry_cs2_num = ttk.Entry(frame_session, textvariable=self.var_cs2_num, **opts_entry10)
         ttk.Label(frame_session, text='Presession time (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
         ttk.Label(frame_session, text='Postsession time (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         ttk.Label(frame_session, text='Number of CS0: ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -382,8 +425,8 @@ class InputManager(ttk.Frame):
         ### frame_misc
         ### UI for other things.
         self.check_image_all = ttk.Checkbutton(frame_misc, variable=self.var_image_all)
-        self.entry_image_ttl_dur = ttk.Entry(frame_misc, **opts_entry10)
-        self.entry_track_period = ttk.Entry(frame_misc, **opts_entry10)
+        self.entry_image_ttl_dur = ttk.Entry(frame_misc, textvariable=self.var_image_ttl_dur, **opts_entry10)
+        self.entry_track_period = ttk.Entry(frame_misc, textvariable=self.var_track_period, **opts_entry10)
         ttk.Label(frame_misc, text='Image everything: ', anchor='e').grid(row=0, column=0, sticky='e')
         ttk.Label(frame_misc, text='Imaging TTL duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         ttk.Label(frame_misc, text='Track period (ms): ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -461,7 +504,7 @@ class InputManager(ttk.Frame):
 
         ## frame_file
         ## UI for saved file.
-        self.entry_file = ttk.Entry(frame_file, **opts_entry)
+        self.entry_file = ttk.Entry(frame_file, textvariable=self.var_file, **opts_entry)
         self.button_find_file = ttk.Button(frame_file, command=self.get_save_file, **opts_button)
         tk.Label(frame_file, text='File to save data:', anchor='w').grid(row=0, column=0, columnspan=2, sticky='w')
         self.entry_file.grid(row=1, column=0, sticky='wens')
@@ -474,10 +517,9 @@ class InputManager(ttk.Frame):
 
         ## frame_slack
         ## UI for slack notifications.
-        self.entry_slack = ttk.Entry(frame_slack, **opts_entry)
-        self.button_slack = ttk.Button(frame_slack, command=lambda: slack_msg(self.entry_slack.get(), 'Test', test=True), **opts_button)
+        self.button_slack = ttk.Button(frame_slack, command=lambda: slack_msg(self.var_slack_address.get(), 'Test', test=True), **opts_button)
         tk.Label(frame_slack, text="Slack address: ", anchor='w').grid(row=0, column=0, columnspan=2, sticky='w')
-        self.entry_slack.grid(row=1, column=0, sticky='wens')
+        ttk.Entry(frame_slack, textvariable=self.var_slack_address, **opts_entry).grid(row=1, column=0, sticky='wens')
         self.button_slack.grid(row=1, column=1, sticky='e', **opts_button_grid)
 
         ### Add icon to folder
@@ -562,9 +604,20 @@ class InputManager(ttk.Frame):
         self.button_cs2['state'] = 'disabled'
 
         # frame_next
-        self.text_next_time = tk.Text(frame_next, width=10, height=1, relief='flat')
-        self.text_next_time.grid()
-        self.text_next_time.insert(0.0, '--')
+        ttk.Label(frame_next, text='Next trial time: ').grid(row=0, column=0, sticky='e')
+        ttk.Label(frame_next, text='Next trial type: ').grid(row=1, column=0, sticky='e')
+        ttk.Entry(frame_next, textvariable=self.var_next_trial_time, state='readonly', **opts_entry10).grid(row=0, column=1)
+        ttk.Entry(frame_next, textvariable=self.var_next_trial_type, state='readonly', **opts_entry10).grid(row=1, column=1)
+
+        # frame_count
+        ttk.Label(frame_count, text='CS0 count: ', anchor='e').grid(row=0, column=0, sticky='e')
+        ttk.Label(frame_count, text='CS1 count: ', anchor='e').grid(row=1, column=0, sticky='e')
+        ttk.Label(frame_count, text='CS2 count: ', anchor='e').grid(row=2, column=0, sticky='e')
+        ttk.Label(frame_count, text='Lick count: ', anchor='e').grid(row=3, column=0, sticky='e')
+        ttk.Entry(frame_count, textvariable=self.var_counter_cs0, state='readonly', **opts_entry10).grid(row=0, column=1)
+        ttk.Entry(frame_count, textvariable=self.var_counter_cs1, state='readonly', **opts_entry10).grid(row=1, column=1)
+        ttk.Entry(frame_count, textvariable=self.var_counter_cs2, state='readonly', **opts_entry10).grid(row=2, column=1)
+        ttk.Entry(frame_count, textvariable=self.var_counter_lick_onset, state='readonly', **opts_entry10).grid(row=3, column=1)
 
         ## Group GUI objects
         self.obj_to_disable_at_open = [
@@ -632,22 +685,25 @@ class InputManager(ttk.Frame):
         # once serial is closed.
         self.obj_enabled_at_open = [False] * len(self.obj_to_disable_at_open)
 
-        # Default values
-        self.entry_pre_session.insert(0, 60000)
-        self.entry_post_session.insert(0, 60000)
-        self.entry_cs0_num.insert(0, 20)
-        self.entry_cs1_num.insert(0, 20)
-        self.entry_cs2_num.insert(0, 0)
-        self.entry_image_ttl_dur.insert(0, self.var_image_ttl_dur.get())
-        self.entry_track_period.insert(0, self.var_track_period.get())
-
         # Finalize
         self.update_param_preview()
         self.parameters = collections.OrderedDict()
         self.ser = serial.Serial(timeout=1, baudrate=9600)
         self.update_ports()
         self.q_serial = Queue()
-        self.counter = {}
+        self.counter = {
+            ev: var_count
+            for ev, var_count in zip(events, [
+                self.var_counter_lick,
+                self.var_counter_lick_form,
+                self.var_counter_movement,
+                self.var_counter_trial_start,
+                self.var_counter_trial_signal,
+                self.var_counter_cs,
+                self.var_counter_us,
+                self.var_counter_response,
+            ])
+        }
 
     def gui_util(self, option):
         '''Updates GUI components
@@ -741,11 +797,11 @@ class InputManager(ttk.Frame):
         radio_uniform_iti.grid(row=2, column=0, sticky='w')
         radio_expo_iti.grid(row=3, column=0, sticky='w')
 
-        self.entry_mean_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
-        self.entry_min_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
-        self.entry_max_iti = ttk.Entry(frame_trial_col1, **opts_entry10)
-        self.entry_pre_stim = ttk.Entry(frame_trial_col1, **opts_entry10)
-        self.entry_post_stim = ttk.Entry(frame_trial_col1, **opts_entry10)
+        self.entry_mean_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_mean_iti, **opts_entry10)
+        self.entry_min_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_min_iti, **opts_entry10)
+        self.entry_max_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_max_iti, **opts_entry10)
+        self.entry_pre_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_pre_stim, **opts_entry10)
+        self.entry_post_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_post_stim, **opts_entry10)
         tk.Label(frame_trial_col1, text='Mean ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
         tk.Label(frame_trial_col1, text='Min ITI (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
         tk.Label(frame_trial_col1, text='Max ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
@@ -759,12 +815,12 @@ class InputManager(ttk.Frame):
 
         # frame_csus
         # UI for CS-US
-        self.entry_cs0_dur = ttk.Entry(frame_cs, **opts_entry10)
-        self.entry_cs0_freq = ttk.Entry(frame_cs, **opts_entry10)
-        self.entry_cs0_pulse = ttk.Entry(frame_cs, **opts_entry10)
-        self.entry_cs1_dur = ttk.Entry(frame_cs, **opts_entry10)
-        self.entry_cs1_freq = ttk.Entry(frame_cs, **opts_entry10)
-        self.entry_cs1_pulse = ttk.Entry(frame_cs, **opts_entry10)
+        self.entry_cs0_dur = ttk.Entry(frame_cs, textvariable=self.var_cs0_dur, **opts_entry10)
+        self.entry_cs0_freq = ttk.Entry(frame_cs, textvariable=self.var_cs0_freq, **opts_entry10)
+        self.entry_cs0_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs0_pulse, **opts_entry10)
+        self.entry_cs1_dur = ttk.Entry(frame_cs, textvariable=self.var_cs1_dur, **opts_entry10)
+        self.entry_cs1_freq = ttk.Entry(frame_cs, textvariable=self.var_cs1_freq, **opts_entry10)
+        self.entry_cs1_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs1_pulse, **opts_entry10)
         tk.Label(frame_cs, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
         tk.Label(frame_cs, text='f (s' u'\u207b\u00b9' ')', anchor='center').grid(row=0, column=2, sticky='we')
         tk.Label(frame_cs, text='pulse (ms)', anchor='center').grid(row=0, column=3, sticky='we')
@@ -777,8 +833,8 @@ class InputManager(ttk.Frame):
         self.entry_cs1_freq.grid(row=2, column=2, sticky='w')
         self.entry_cs1_pulse.grid(row=2, column=3, sticky='w')
 
-        self.entry_us0_dur = ttk.Entry(frame_us, **opts_entry10)
-        self.entry_us1_dur = ttk.Entry(frame_us, **opts_entry10)
+        self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
+        self.entry_us1_dur = ttk.Entry(frame_us, textvariable=self.var_us1_dur, **opts_entry10)
         tk.Label(frame_us, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
         tk.Label(frame_us, text='US0: ', anchor='e').grid(row=1, column=0, sticky='e')
         tk.Label(frame_us, text='US1: ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -787,8 +843,8 @@ class InputManager(ttk.Frame):
 
         # frame_vac
         # UI for vacuum.
-        self.entry_consumption_dur = ttk.Entry(frame_vac, **opts_entry10)
-        self.entry_vac_dur = ttk.Entry(frame_vac, **opts_entry10)
+        self.entry_consumption_dur = ttk.Entry(frame_vac, textvariable=self.var_consumption_dur, **opts_entry10)
+        self.entry_vac_dur = ttk.Entry(frame_vac, textvariable=self.var_vac_dur, **opts_entry10)
         tk.Label(frame_vac, text='Consumption time limit (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
         tk.Label(frame_vac, text='Vacuum duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
         self.entry_consumption_dur.grid(row=0, column=1, sticky='w')
@@ -796,43 +852,8 @@ class InputManager(ttk.Frame):
 
         # frame_update
         # UI for 'Update' button
-        button_update = ttk.Button(frame_update, text='Update', command=self.update_params, **opts_button)
+        button_update = ttk.Button(frame_update, text='Update', command=self.update_param_preview, **opts_button)
         button_update.grid(row=0, column=0, **opts_button_grid)
-
-        entries = [
-            self.entry_mean_iti,
-            self.entry_min_iti,
-            self.entry_max_iti,
-            self.entry_pre_stim,
-            self.entry_post_stim,
-            self.entry_cs0_dur,
-            self.entry_cs0_freq,
-            self.entry_cs0_pulse,
-            self.entry_us0_dur,
-            self.entry_cs1_dur,
-            self.entry_cs1_freq,
-            self.entry_cs1_pulse,
-            self.entry_us1_dur,
-            self.entry_consumption_dur,
-            self.entry_vac_dur,
-        ]
-        entry_vars = [
-            self.var_mean_iti,
-            self.var_min_iti,
-            self.var_max_iti,
-            self.var_pre_stim,
-            self.var_post_stim,
-            self.var_cs0_dur,
-            self.var_cs0_freq,
-            self.var_cs0_pulse,
-            self.var_us0_dur,
-            self.var_cs1_dur,
-            self.var_cs1_freq,
-            self.var_cs1_pulse,
-            self.var_us1_dur,
-            self.var_consumption_dur,
-            self.var_vac_dur,
-        ]
 
         if session_type == 0:
             # Classical conditioning
@@ -840,18 +861,18 @@ class InputManager(ttk.Frame):
             frame_csus2 = ttk.Frame(window_param)
             frame_csus2.grid(row=3, column=0, sticky='e', **opts_frame1)
             
-            self.entry_cs2_dur = ttk.Entry(frame_cs, **opts_entry10)
-            self.entry_cs2_freq = ttk.Entry(frame_cs, **opts_entry10)
-            self.entry_cs2_pulse = ttk.Entry(frame_cs, **opts_entry10)
+            self.entry_cs2_dur = ttk.Entry(frame_cs, textvariable=self.var_cs2_dur, **opts_entry10)
+            self.entry_cs2_freq = ttk.Entry(frame_cs, textvariable=self.var_cs2_freq, **opts_entry10)
+            self.entry_cs2_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs2_pulse, **opts_entry10)
             tk.Label(frame_cs, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
             self.entry_cs2_dur.grid(row=3, column=1, sticky='w')
             self.entry_cs2_freq.grid(row=3, column=2, sticky='w')
             self.entry_cs2_pulse.grid(row=3, column=3, sticky='w')
 
-            self.entry_us2_dur = ttk.Entry(frame_us, **opts_entry10)
-            self.entry_us0_delay = ttk.Entry(frame_us, **opts_entry10)
-            self.entry_us1_delay = ttk.Entry(frame_us, **opts_entry10)
-            self.entry_us2_delay = ttk.Entry(frame_us, **opts_entry10)
+            self.entry_us2_dur = ttk.Entry(frame_us, textvariable=self.var_us2_dur, **opts_entry10)
+            self.entry_us0_delay = ttk.Entry(frame_us, textvariable=self.var_us0_delay, **opts_entry10)
+            self.entry_us1_delay = ttk.Entry(frame_us, textvariable=self.var_us1_delay, **opts_entry10)
+            self.entry_us2_delay = ttk.Entry(frame_us, textvariable=self.var_us2_delay, **opts_entry10)
             tk.Label(frame_us, text='US2: ', anchor='e').grid(row=3, column=0, sticky='e')
             tk.Label(frame_us, text='Delay (ms)', anchor='e').grid(row=0, column=2, sticky='e')
             self.entry_us2_dur.grid(row=3, column=1, sticky='w')
@@ -859,24 +880,6 @@ class InputManager(ttk.Frame):
             self.entry_us1_delay.grid(row=2, column=2, sticky='w')
             self.entry_us2_delay.grid(row=3, column=2, sticky='w')
             
-            entries += [
-                self.entry_cs2_dur,
-                self.entry_cs2_freq,
-                self.entry_cs2_pulse,
-                self.entry_us2_dur,
-                self.entry_us0_delay,
-                self.entry_us1_delay,
-                self.entry_us2_delay,
-            ]
-            entry_vars += [
-                self.var_cs2_dur,
-                self.var_cs2_freq,
-                self.var_cs2_pulse,
-                self.var_us2_dur,
-                self.var_us0_delay,
-                self.var_us1_delay,
-                self.var_us2_delay,
-            ]
         elif session_type == 1:
             # Go/no-go
 
@@ -885,12 +888,12 @@ class InputManager(ttk.Frame):
 
             ### frame_gonogo
             ### UI for trial start (signal)
-            self.entry_trial_signal_offset = ttk.Entry(frame_gonogo, **opts_entry10)
-            self.entry_trial_signal_dur = ttk.Entry(frame_gonogo, **opts_entry10)
-            self.entry_trial_signal_freq = ttk.Entry(frame_gonogo, **opts_entry10)
-            self.entry_grace_dur = ttk.Entry(frame_gonogo, **opts_entry10)
-            self.entry_response_dur = ttk.Entry(frame_gonogo, **opts_entry10)
-            self.entry_timeout_dur = ttk.Entry(frame_gonogo, **opts_entry10)
+            self.entry_trial_signal_offset = ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_offset, **opts_entry10)
+            self.entry_trial_signal_dur = ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_dur, **opts_entry10)
+            self.entry_trial_signal_freq = ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_freq, **opts_entry10)
+            self.entry_grace_dur = ttk.Entry(frame_gonogo, textvariable=self.var_grace_dur, **opts_entry10)
+            self.entry_response_dur = ttk.Entry(frame_gonogo, textvariable=self.var_response_dur, **opts_entry10)
+            self.entry_timeout_dur = ttk.Entry(frame_gonogo, textvariable=self.var_timeout_dur, **opts_entry10)
             tk.Label(frame_gonogo, text='Trial signal offset (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
             tk.Label(frame_gonogo, text='Trial signal duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
             tk.Label(frame_gonogo, text='Trial signal frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=2, column=0, sticky='e')
@@ -903,72 +906,6 @@ class InputManager(ttk.Frame):
             self.entry_grace_dur.grid(row=3, column=1, sticky='w')
             self.entry_response_dur.grid(row=4, column=1, sticky='w')
             self.entry_timeout_dur.grid(row=5, column=1, sticky='w')
-
-            entries += [
-                self.entry_trial_signal_offset,
-                self.entry_trial_signal_dur,
-                self.entry_trial_signal_freq,
-                self.entry_grace_dur,
-                self.entry_response_dur,
-                self.entry_timeout_dur,
-            ]
-            entry_vars += [
-                self.var_trial_signal_offset,
-                self.var_trial_signal_dur,
-                self.var_trial_signal_freq,
-                self.var_grace_dur,
-                self.var_response_dur,
-                self.var_timeout_dur,
-            ]
-
-        for entry, var in zip(entries, entry_vars):
-            entry.delete(0, 'end')
-            entry.insert(0, var.get())
-
-    def update_params(self):
-        '''Update parameters from GUI
-        Executes when 'Update' button is pressed from parameters window.
-        '''
-
-        session_type = self.var_session_type.get()
-        iti_type = self.var_iti_distro.get()
-
-        self.var_mean_iti.set(int(self.entry_mean_iti.get()))
-        self.var_min_iti.set(int(self.entry_min_iti.get()))
-        self.var_max_iti.set(int(self.entry_max_iti.get()))
-        self.var_pre_stim.set(int(self.entry_pre_stim.get()))
-        self.var_post_stim.set(int(self.entry_post_stim.get()))
-        self.var_cs0_dur.set(int(self.entry_cs0_dur.get()))
-        self.var_cs0_freq.set(int(self.entry_cs0_freq.get()))
-        self.var_cs0_pulse.set(int(self.entry_cs0_pulse.get()))
-        self.var_us0_dur.set(int(self.entry_us0_dur.get()))
-        self.var_cs1_dur.set(int(self.entry_cs1_dur.get()))
-        self.var_cs1_freq.set(int(self.entry_cs1_freq.get()))
-        self.var_cs1_pulse.set(int(self.entry_cs1_pulse.get()))
-        self.var_us1_dur.set(int(self.entry_us1_dur.get()))
-        self.var_consumption_dur.set(int(self.entry_consumption_dur.get()))
-        self.var_vac_dur.set(int(self.entry_vac_dur.get()))
-
-        if session_type == 0:
-            # Classical conditioning
-            self.var_us0_delay.set(int(self.entry_us0_delay.get()))
-            self.var_us1_delay.set(int(self.entry_us1_delay.get()))
-            self.var_cs2_dur.set(int(self.entry_cs2_dur.get()))
-            self.var_cs2_freq.set(int(self.entry_cs2_freq.get()))
-            self.var_cs2_pulse.set(int(self.entry_cs2_pulse.get()))
-            self.var_us2_delay.set(int(self.entry_us2_delay.get()))
-            self.var_us2_dur.set(int(self.entry_us2_dur.get()))
-
-        elif session_type == 1:
-            # Go/no-go
-            self.var_trial_signal_offset.set(int(self.entry_trial_signal_offset.get()))
-            self.var_trial_signal_dur.set(int(self.entry_trial_signal_dur.get()))
-            self.var_trial_signal_freq.set(int(self.entry_trial_signal_freq.get()))
-            self.var_grace_dur.set(int(self.entry_grace_dur.get()))
-            self.var_response_dur.set(int(self.entry_response_dur.get()))
-            self.var_timeout_dur.set(int(self.entry_timeout_dur.get()))
-
-        self.update_param_preview()
 
     def update_param_preview(self):
         session_type = self.var_session_type.get()
@@ -1073,11 +1010,11 @@ class InputManager(ttk.Frame):
         self.parameters = collections.OrderedDict()   # Clear self.parameters (maybe not necessary)
 
         self.parameters['session_type'] = self.var_session_type.get()
-        self.parameters['pre_session'] = int(self.entry_pre_session.get())
-        self.parameters['post_session'] = int(self.entry_post_session.get())
-        self.parameters['cs0_num'] = int(self.entry_cs0_num.get())
-        self.parameters['cs1_num'] = int(self.entry_cs1_num.get())
-        self.parameters['cs2_num'] = int(self.entry_cs2_num.get())
+        self.parameters['pre_session'] = self.var_presession.get()
+        self.parameters['post_session'] = self.var_postsession.get()
+        self.parameters['cs0_num'] = self.var_cs0_num.get()
+        self.parameters['cs1_num'] = self.var_cs1_num.get()
+        self.parameters['cs2_num'] = self.var_cs2_num.get()
         self.parameters['iti_distro'] = self.var_iti_distro.get()
         self.parameters['mean_iti'] = self.var_mean_iti.get()
         self.parameters['min_iti'] = self.var_min_iti.get()
@@ -1128,11 +1065,10 @@ class InputManager(ttk.Frame):
                 return
             elif time.time() >= start_time + timeout:
                 print('Error sending parameters to Arduino')
-                print('Uploading timed out. Start signal not found.')
+                print('Uploading timed out. Start signal not found. Make sure Arduino is configured.')
                 self.gui_util('close')
                 self.close_serial()
                 return
-
 
     def close_serial(self):
         '''Close serial connection to Arduino on button press'''
@@ -1161,15 +1097,14 @@ class InputManager(ttk.Frame):
         '''Opens prompt for file for data to be saved on button press'''
 
         save_file = tkFileDialog.asksaveasfilename(
-            initialdir=self.entry_file.get(),
+            initialdir=self.var_file.get(),
             defaultextension='.h5',
             filetypes=[
                 ('HDF5 file', '*.h5 *.hdf5'),
                 ('All files', '*.*')
             ]
         )
-        self.entry_file.delete(0, 'end')
-        self.entry_file.insert(0, save_file)
+        self.var_file.set(save_file)
 
     def start(self, code_start='E'):
         '''Start session on button press'''
@@ -1177,10 +1112,10 @@ class InputManager(ttk.Frame):
         self.gui_util('start')
 
         # Create data file
-        if self.entry_file.get():
+        if self.var_file.get():
             try:
                 # Create file if it doesn't already exist, append otherwise ('a' parameter)
-                self.data_file = h5py.File(self.entry_file.get(), 'a')
+                self.data_file = h5py.File(self.var_file.get(), 'a')
             except IOError:
                 tkMessageBox.showerror('File error', 'Could not create file to save data.')
                 self.gui_util('stop')
@@ -1264,12 +1199,13 @@ class InputManager(ttk.Frame):
         )
 
         # Reset things
-        self.counter = {ev: 0 for ev in events}
+        # self.counter = {ev: 0 for ev in events}
+        for counter in self.counter.values(): counter.set(0)
 
         # Start session
         ser_write(self.ser, code_start)
         thread_scan.start()
-        self.start_time = datetime.now().time()
+        self.start_time = datetime.now()
         print('Session started at {}'.format(self.start_time))
         self.grp_exp.attrs['start_time'] = str(self.start_time)
 
@@ -1322,15 +1258,23 @@ class InputManager(ttk.Frame):
 
             # Record event
             if code not in [8]:
-                self.grp_behav[event[code]][:, self.counter[event[code]]] = [ts, data]
-                self.counter[event[code]] += 1
+                self.grp_behav[event[code]][:, self.counter[event[code]].get()] = [ts, data]
+                self.counter[event[code]].set(self.counter[event[code]].get() + 1)
 
             # Update GUI
+            if code == code_lick:
+                if data == 1:
+                    self.var_counter_lick_onset.set(self.var_counter_lick_onset.get() + 1)
+            if code == code_cs_start:
+                if data == 0:
+                    self.var_counter_cs0.set(self.var_counter_cs0.get() + 1)
+                elif data == 1:
+                    self.var_counter_cs1.set(self.var_counter_cs1.get() + 1)
+                elif data == 2:
+                    self.var_counter_cs2.set(self.var_counter_cs2.get() + 1)
             if code == code_next_trial:
-                self.text_next_time.delete(0.0, 'end')
-                self.text_next_type.delete(0.0, 'end')
-                self.text_next_time.insert(0.0, self.start_time + datetime.timedelta(microseconds=ts))
-                self.text_next_type.insert(0.0, data)
+                self.var_next_trial_time.set((self.start_time + timedelta(milliseconds=ts)).strftime('%H:%M:%S'))
+                self.var_next_trial_type.set(data)
 
         self.parent.after(refresh_rate, self.update_session)
 
@@ -1353,7 +1297,7 @@ class InputManager(ttk.Frame):
         self.grp_behav.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
         self.grp_behav.attrs['arduino_end'] = arduino_end
         for ev in events:
-            self.grp_behav[ev].resize((2, self.counter[ev]))
+            self.grp_behav[ev].resize((2, self.counter[ev].get()))
 
         # self.grp_cam.attrs['end_time'] = end_time
         # if frame_cutoff:
@@ -1366,8 +1310,8 @@ class InputManager(ttk.Frame):
         self.data_file.close()
 
         # Slack that session is done
-        if self.entry_slack.get():
-            slack_msg(self.entry_slack.get(), 'Session ended')
+        if self.var_slack_address.get():
+            slack_msg(self.var_slack_address.get(), 'Session ended')
         print('All done!')
 
 
@@ -1439,7 +1383,7 @@ def scan_serial(q_serial, ser, print_arduino=False, suppress=[]):
 def main():
     # GUI
     root = tk.Tk()
-    root.wm_title('Go/no go & classical conditining')
+    root.wm_title('Go/no go & classical conditioning')
     # default_font = tkFont.nametofont('TkDefaultFont')
     # default_font.configure(family='Arial')
     # root.option_add('*Font', default_font)
