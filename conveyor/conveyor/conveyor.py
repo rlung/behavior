@@ -605,7 +605,6 @@ class InputManager(ttk.Frame):
         session_length = (
             self.parameters['pre_session'] + self.parameters['post_session'] + 
             self.parameters['iti'] * self.parameters['trial_num']
-            # (self.parameters['pre_stim'] + self.parameters['pre_stim'] + self.parameters['iti']) * self.parameters['trial_num']
         )
         nstepframes = 2 * session_length / self.var_track_period.get()
         chunks = (2, 1)
