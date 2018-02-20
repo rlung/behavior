@@ -17,10 +17,10 @@ Packages needed:
 
 TODO:
 - CS names
-- scoreboard
-- link variable to ttk.Entry's
-- set up threads as daemons
-- update button for parameters closes window
+x scoreboard
+x link variable to ttk.Entry's
+x set up threads as daemons
+x update button for parameters closes window
 
 '''
 
@@ -215,6 +215,8 @@ class InputManager(ttk.Frame):
         self.var_print_arduino = tk.BooleanVar()
         self.var_suppress_print_lick_form = tk.BooleanVar()
         self.var_suppress_print_movement = tk.BooleanVar()
+        self.var_subject = tk.StringVar()
+        self.var_weight = tk.StringVar()
         self.var_file = tk.StringVar()
         self.var_slack_address = tk.StringVar()
         self.var_counter_lick = tk.IntVar()
@@ -487,12 +489,12 @@ class InputManager(ttk.Frame):
 
         ## frame_info
         ## UI for session info.
-        self.entry_subject = ttk.Entry(frame_info, **opts_entry)
-        self.entry_weight = ttk.Entry(frame_info, **opts_entry)
+        self.entry_subject = ttk.Entry(frame_info, textvariable=self.var_subject, **opts_entry)
+        self.entry_weight = ttk.Entry(frame_info, textvariable=self.var_weight, **opts_entry)
         self.scrolled_notes = ScrolledText(frame_info, width=20, height=15)
-        tk.Label(frame_info, text="Subject: ").grid(row=0, column=0, sticky='e')
-        tk.Label(frame_info, text="Weight: ").grid(row=1, column=0, sticky='e')
-        tk.Label(frame_info, text="Notes: ").grid(row=2, column=0, columnspan=2, sticky='w')
+        tk.Label(frame_info, text='Subject: ').grid(row=0, column=0, sticky='e')
+        tk.Label(frame_info, text='Weight: ').grid(row=1, column=0, sticky='e')
+        tk.Label(frame_info, text='Notes: ').grid(row=2, column=0, columnspan=2, sticky='w')
         self.entry_subject.grid(row=0, column=1, sticky='w')
         self.entry_weight.grid(row=1, column=1, sticky='w')
         self.scrolled_notes.grid(row=3, column=0, columnspan=2, sticky='wens')
@@ -513,7 +515,7 @@ class InputManager(ttk.Frame):
         ## frame_slack
         ## UI for slack notifications.
         self.button_slack = ttk.Button(frame_slack, command=lambda: slack_msg(self.var_slack_address.get(), 'Test', test=True), **opts_button)
-        tk.Label(frame_slack, text="Slack address: ", anchor='w').grid(row=0, column=0, columnspan=2, sticky='w')
+        tk.Label(frame_slack, text='Slack address: ', anchor='w').grid(row=0, column=0, columnspan=2, sticky='w')
         ttk.Entry(frame_slack, textvariable=self.var_slack_address, **opts_entry).grid(row=1, column=0, sticky='wens')
         self.button_slack.grid(row=1, column=1, sticky='e', **opts_button_grid)
 
@@ -655,6 +657,8 @@ class InputManager(ttk.Frame):
             self.check_print_arduino,
             self.check_suppress_print_lick_form,
             self.check_suppress_print_movement,
+            self.entry_subject,
+            self.entry_weight,
             self.entry_file,
             self.button_find_file,
             self.button_slack,
@@ -699,6 +703,12 @@ class InputManager(ttk.Frame):
                 self.var_counter_response,
             ])
         }
+        self.counter_gui = [
+            self.var_counter_cs0,
+            self.var_counter_cs1,
+            self.var_counter_cs2,
+            self.var_counter_lick_onset,
+        ]
 
     def gui_util(self, option):
         '''Updates GUI components
@@ -1121,37 +1131,31 @@ class InputManager(ttk.Frame):
         file_index = ''
         while True:
             try:
-                self.grp_exp = self.data_file.create_group(date + file_index)
+                self.grp_exp = self.data_file.create_group('{}/{}'.format(self.var_subject.get(), date + file_index))
             except (RuntimeError, ValueError):
                 index += 1
                 file_index = '-' + str(index)
             else:
                 break
+        self.grp_exp.attrs['weight'] = self.var_weight.get()
 
         # Initialize datasets
         n_trials = self.parameters['cs0_num'] + self.parameters['cs1_num'] + self.parameters['cs2_num']
-        n_movement_frames = 2 * (n_trials * self.parameters['mean_iti'] + 
+        n_movement_frames = 2 * (
+            n_trials * self.parameters['mean_iti'] + 
             self.parameters['pre_session'] + self.parameters['post_session']
             ) / self.parameters['track_period']
         chunk_size = (2, 1)
 
         self.grp_behav = self.grp_exp.create_group('behavior')
-        self.grp_behav.create_dataset(name='lick', dtype='uint32',
-            shape=(2, n_movement_frames), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='lick_form', dtype='uint32',
-            shape=(2, n_movement_frames), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='movement', dtype='int32',
-            shape=(2, n_movement_frames), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='trial_start', dtype='uint32',
-            shape=(2, n_trials), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='trial_signal', dtype='uint32',
-            shape=(2, n_trials), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='cs', dtype='uint32',
-            shape=(2, n_trials), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='us', dtype='uint32',
-            shape=(2, n_trials), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='response', dtype='uint32',
-            shape=(2, n_trials), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='lick', dtype='uint32', shape=(2, n_movement_frames), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='lick_form', dtype='uint32', shape=(2, n_movement_frames), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='movement', dtype='int32', shape=(2, n_movement_frames), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='trial_start', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='trial_signal', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='cs', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='us', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='response', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
 
         # self.grp_cam = self.data_file.create_group('cam')
         # self.dset_ts = self.grp_cam.create_dataset('timestamps', dtype=float,
@@ -1179,12 +1183,14 @@ class InputManager(ttk.Frame):
         ]
         thread_scan = threading.Thread(
             target=scan_serial,
-            args=(self.q_serial, self.ser, self.var_print_arduino.get(), suppress)
+            args=(self.q_serial, self.ser, self.var_print_arduino.get(), suppress),
         )
+        thread_scan.daemon = True
 
-        # Reset things
+        # Reset counters
         # self.counter = {ev: 0 for ev in events}
         for counter in self.counter.values(): counter.set(0)
+        for counter_gui in self.counter_gui: counter_gui.set(0)
 
         # Start session
         ser_write(self.ser, code_start)
@@ -1218,7 +1224,7 @@ class InputManager(ttk.Frame):
             code_response: 'response',
         }
 
-        # End on "Stop" button (by user)
+        # End on 'Stop' button (by user)
         if self.var_stop.get():
             self.var_stop.set(False)
             ser_write(self.ser, '0')
@@ -1241,7 +1247,7 @@ class InputManager(ttk.Frame):
                 return
 
             # Record event
-            if code not in [8]:
+            if code not in [code_next_trial]:
                 self.grp_behav[event[code]][:, self.counter[event[code]].get()] = [ts, data]
                 self.counter[event[code]].set(self.counter[event[code]].get() + 1)
 
@@ -1267,7 +1273,7 @@ class InputManager(ttk.Frame):
         Closes hardware connections and saves HDF5 data file. Resets GUI.
         '''
 
-        end_time = datetime.now().strftime("%H:%M:%S")
+        end_time = datetime.now().strftime('%H:%M:%S')
         print('Session ended at {}'.format(end_time))
         
         self.gui_util('stop')
@@ -1275,8 +1281,6 @@ class InputManager(ttk.Frame):
         # self.cam_close()
 
         print('Writing behavioral data into HDF5 group {}'.format(self.grp_exp.name))
-        self.grp_exp.attrs['subject'] = self.entry_subject.get()
-        self.grp_exp.attrs['weight'] = self.entry_weight.get()
         self.grp_behav.attrs['end_time'] = end_time
         self.grp_behav.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
         self.grp_behav.attrs['arduino_end'] = arduino_end
