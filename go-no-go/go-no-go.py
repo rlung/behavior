@@ -210,6 +210,7 @@ class InputManager(ttk.Frame):
         self.var_image_all = tk.IntVar()
         self.var_image_ttl_dur = tk.IntVar()
         self.var_track_period = tk.IntVar()
+        self.var_serial_status = tk.StringVar()
         self.var_verbose = tk.BooleanVar()
         self.var_print_arduino = tk.BooleanVar()
         self.var_suppress_print_lick_form = tk.BooleanVar()
@@ -270,6 +271,7 @@ class InputManager(ttk.Frame):
         self.var_image_all.set(0)
         self.var_image_ttl_dur.set(100)
         self.var_track_period.set(50)
+        self.var_serial_status.set('Closed')
         self.var_next_trial_time.set('--')
         self.var_next_trial_type.set('--')
         self.var_counter_cs0.set(0)
@@ -456,7 +458,6 @@ class InputManager(ttk.Frame):
         ## frame_arduino
         ## Arduino setup
         self.port_var = tk.StringVar()
-        self.entry_serial_status = ttk.Entry(frame_arduino1, **opts_entry)
         self.option_ports = ttk.OptionMenu(frame_arduino1, self.port_var, [])
         self.button_update_ports = ttk.Button(frame_arduino1, text='u', command=self.update_ports, **opts_button)
         self.button_open_port = ttk.Button(frame_arduino2, text='Open', command=self.open_serial, **opts_button)
@@ -464,7 +465,7 @@ class InputManager(ttk.Frame):
         tk.Label(frame_arduino1, text='Port: ').grid(row=0, column=0, sticky='e')
         tk.Label(frame_arduino1, text='State: ').grid(row=1, column=0, sticky='e')
         self.option_ports.grid(row=0, column=1, sticky='we', **opts_frame2)
-        self.entry_serial_status.grid(row=1, column=1, sticky='w', **opts_frame2)
+        ttk.Entry(frame_arduino1, textvariable=self.var_serial_status, state='readonly', **opts_entry).grid(row=1, column=1, sticky='w', **opts_frame2)
         self.button_update_ports.grid(row=0, column=2, **opts_button_grid)
         self.button_open_port.grid(row=0, column=0, sticky='we', **opts_button_grid)
         self.button_close_port.grid(row=0, column=1, sticky='we', **opts_button_grid)
@@ -472,11 +473,6 @@ class InputManager(ttk.Frame):
         icon_refresh = ImageTk.PhotoImage(file='graphics/refresh.png')
         self.button_update_ports.config(image=icon_refresh)
         self.button_update_ports.image = icon_refresh
-
-        self.entry_serial_status.insert(0, 'Closed')
-        self.entry_serial_status['state'] = 'normal'
-        self.entry_serial_status['state'] = 'readonly'
-        self.button_close_port['state'] = 'disabled'
 
         ## frame_debug
         ## UI for debugging options.
@@ -717,29 +713,20 @@ class InputManager(ttk.Frame):
                 # Disable object
                 obj['state'] = 'disabled'
 
-            self.entry_serial_status['state'] = 'normal'
-            self.entry_serial_status.delete(0, 'end')
-            self.entry_serial_status.insert(0, 'Opening...')
-            self.entry_serial_status['state'] = 'readonly'
+            self.var_serial_status.set('Opening...')
         elif option == 'opened':
             # Enable start objects
             for obj in self.obj_to_enable_when_open:
                 obj['state'] = 'normal'
 
-            self.entry_serial_status['state'] = 'normal'
-            self.entry_serial_status.delete(0, 'end')
-            self.entry_serial_status.insert(0, 'Opened')
-            self.entry_serial_status['state'] = 'readonly'
+            self.var_serial_status.set('Opened')
         elif option == 'close':
             for obj, to_enable in zip(self.obj_to_disable_at_open, self.obj_enabled_at_open):
                 if to_enable: obj['state'] = 'normal'
             for obj in self.obj_to_enable_when_open:
                 obj['state'] = 'disabled'
 
-            self.entry_serial_status['state'] = 'normal'
-            self.entry_serial_status.delete(0, 'end')
-            self.entry_serial_status.insert(0, 'Closed')
-            self.entry_serial_status['state'] = 'readonly'
+            self.var_serial_status.set('Closed')
         elif option == 'start':
             for obj in self.obj_to_disable_at_start:
                 obj['state'] = 'disabled'
@@ -751,10 +738,7 @@ class InputManager(ttk.Frame):
             for obj in self.obj_to_enable_at_start:
                 obj['state'] = 'disabled'
 
-            self.entry_serial_status['state'] = 'normal'
-            self.entry_serial_status.delete(0, tk.END)
-            self.entry_serial_status.insert(0, 'Closed')
-            self.entry_serial_status['state'] = 'readonly'
+            self.var_serial_status.set('Closed')
 
     def set_params(self):
         session_type = self.var_session_type.get()
@@ -762,6 +746,7 @@ class InputManager(ttk.Frame):
         title_session = 'Go/no-go' if session_type else 'Classical conditioning'
         window_param = tk.Toplevel(self)
         window_param.wm_title('{} parameters'.format(title_session))
+        window_param.grab_set()
 
         frame_trial = ttk.Frame(window_param)
         frame_csus = ttk.Frame(window_param)
@@ -851,7 +836,7 @@ class InputManager(ttk.Frame):
 
         # frame_update
         # UI for 'Update' button
-        button_update = ttk.Button(frame_update, text='Update', command=self.update_param_preview, **opts_button)
+        button_update = ttk.Button(frame_update, text='Update', command=lambda: [self.update_param_preview(), window_param.destroy()], **opts_button)
         button_update.grid(row=0, column=0, **opts_button_grid)
 
         if session_type == 0:
