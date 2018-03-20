@@ -29,8 +29,9 @@ Example input:
 
 #include <Behavior.h>
 
-#define LICK_THRESHOLD 511
-#define IMGPINDUR 100     // Length of imaging signal pulse
+#define LICK_REC_THRESHOLD 900  // Threshold to start recording "lick waveform"
+#define LICK_THRESHOLD 511      // Threshold to classify lick
+#define IMGPINDUR 100           // Length of imaging signal pulse
 #define CODEEND 48
 #define CODEVACON 49
 #define CODEVACOFF 50
@@ -78,10 +79,16 @@ const int code_us_start = 6;
 const int code_response = 7;
 const int code_next_trial = 8;
 
+// Trial codes
+const int code_free_licking = 2;
+const int code_classical_conditioning = 0;
+const int code_go_nogo = 1;
+
 // Variables via serial
 unsigned int session_type;
 unsigned long pre_session;
 unsigned long post_session;
+unsigned long session_dur;
 int cs0_num;
 int cs1_num;
 int cs2_num;
@@ -141,6 +148,10 @@ void EndSession(unsigned long ts) {
   behav.SendData(stream, code_end, ts, 0);
 
   // Reset pins
+  digitalWrite(pin_vac, LOW);
+  digitalWrite(pin_sol_0, LOW);
+  digitalWrite(pin_sol_1, LOW);
+  digitalWrite(pin_sol_2, LOW);
   digitalWrite(pin_img_start, LOW);
   digitalWrite(pin_img_stop, HIGH);
   delay(IMGPINDUR);
@@ -162,6 +173,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
       reading = Serial.read();
       switch(reading) {
         case CODEEND:
+          Serial.println("End by serial command");
           EndSession(ts);
           break;
         case CODEVACON:
@@ -209,36 +221,42 @@ void LookForSignal(int waiting_for, unsigned long ts) {
           digitalWrite(pin_sol_2, LOW);
           break;
         case CODECS0:
-          tone(pin_tone, cs0_freq, cs0_dur);
-          if (cs0_pulse_dur) {
-            unsigned long pulsed_cs_start = millis();
-            while (millis() < (pulsed_cs_start + cs0_dur)) {
-              if ((millis() - pulsed_cs_start) % (cs0_pulse_dur * 2) < cs0_pulse_dur) tone(pin_tone, cs0_freq);
-              else noTone(pin_tone);
+          if (cs0_dur) {
+            tone(pin_tone, cs0_freq, cs0_dur);
+            if (cs0_pulse_dur) {
+              unsigned long pulsed_cs_start = millis();
+              while (millis() < (pulsed_cs_start + cs0_dur)) {
+                if ((millis() - pulsed_cs_start) % (cs0_pulse_dur * 2) < cs0_pulse_dur) tone(pin_tone, cs0_freq);
+                else noTone(pin_tone);
+              }
+              noTone(pin_tone);
             }
-            noTone(pin_tone);
           }
           break;
         case CODECS1:
-          tone(pin_tone, cs1_freq, cs1_dur);
-          if (cs1_pulse_dur) {
-            unsigned long pulsed_cs_start = millis();
-            while (millis() < (pulsed_cs_start + cs1_dur)) {
-              if ((millis() - pulsed_cs_start) % (cs1_pulse_dur * 2) < cs1_pulse_dur) tone(pin_tone, cs1_freq);
-              else noTone(pin_tone);
+          if (cs1_dur) {
+            tone(pin_tone, cs1_freq, cs1_dur);
+            if (cs1_pulse_dur) {
+              unsigned long pulsed_cs_start = millis();
+              while (millis() < (pulsed_cs_start + cs1_dur)) {
+                if ((millis() - pulsed_cs_start) % (cs1_pulse_dur * 2) < cs1_pulse_dur) tone(pin_tone, cs1_freq);
+                else noTone(pin_tone);
+              }
+              noTone(pin_tone);
             }
-            noTone(pin_tone);
           }
           break;
         case CODECS2:
-          tone(pin_tone, cs2_freq, cs2_dur);
-          if (cs2_pulse_dur) {
-            unsigned long pulsed_cs_start = millis();
-            while (millis() < (pulsed_cs_start + cs2_dur)) {
-              if ((millis() - pulsed_cs_start) % (cs2_pulse_dur * 2) < cs2_pulse_dur) tone(pin_tone, cs2_freq);
-              else noTone(pin_tone);
+          if (cs2_dur) {
+            tone(pin_tone, cs2_freq, cs2_dur);
+            if (cs2_pulse_dur) {
+              unsigned long pulsed_cs_start = millis();
+              while (millis() < (pulsed_cs_start + cs2_dur)) {
+                if ((millis() - pulsed_cs_start) % (cs2_pulse_dur * 2) < cs2_pulse_dur) tone(pin_tone, cs2_freq);
+                else noTone(pin_tone);
+              }
+              noTone(pin_tone);
             }
-            noTone(pin_tone);
           }
           break;
         case CODEPARAMS:
@@ -257,7 +275,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 38;
+  const int paramNum = 39;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -267,41 +285,42 @@ void GetParams() {
   session_type = parameters[0];
   pre_session = parameters[1];
   post_session = parameters[2];
-  cs0_num = parameters[3];
-  cs1_num = parameters[4];
-  cs2_num = parameters[5];
-  iti_distro = parameters[6];
-  mean_iti = parameters[7];
-  min_iti = parameters[8];
-  max_iti = parameters[9];
-  pre_stim = parameters[10];
-  post_stim = parameters[11];
-  cs0_dur = parameters[12];
-  cs0_freq = parameters[13];
-  cs0_pulse_dur = parameters[14];
-  us0_dur = parameters[15];
-  us0_delay = parameters[16];
-  cs1_dur = parameters[17];
-  cs1_freq = parameters[18];
-  cs1_pulse_dur = parameters[19];
-  us1_dur = parameters[20];
-  us1_delay = parameters[21];
-  cs2_dur = parameters[22];
-  cs2_freq = parameters[23];
-  cs2_pulse_dur = parameters[24];
-  us2_dur = parameters[25];
-  us2_delay = parameters[26];
-  consumption_dur = parameters[27];
-  vac_dur = parameters[28];
-  trial_signal_offset = parameters[29];
-  trial_signal_dur = parameters[30];
-  trial_signal_freq = parameters[31];
-  grace_dur = parameters[32];
-  response_dur = parameters[33];
-  timeout_dur = parameters[34];
-  image_all = parameters[35];
-  image_ttl_dur = parameters[36];
-  track_period = parameters[37];
+  session_dur = parameters[3];
+  cs0_num = parameters[4];
+  cs1_num = parameters[5];
+  cs2_num = parameters[6];
+  iti_distro = parameters[7];
+  mean_iti = parameters[8];
+  min_iti = parameters[9];
+  max_iti = parameters[10];
+  pre_stim = parameters[11];
+  post_stim = parameters[12];
+  cs0_dur = parameters[13];
+  cs0_freq = parameters[14];
+  cs0_pulse_dur = parameters[15];
+  us0_dur = parameters[16];
+  us0_delay = parameters[17];
+  cs1_dur = parameters[18];
+  cs1_freq = parameters[19];
+  cs1_pulse_dur = parameters[20];
+  us1_dur = parameters[21];
+  us1_delay = parameters[22];
+  cs2_dur = parameters[23];
+  cs2_freq = parameters[24];
+  cs2_pulse_dur = parameters[25];
+  us2_dur = parameters[26];
+  us2_delay = parameters[27];
+  consumption_dur = parameters[28];
+  vac_dur = parameters[29];
+  trial_signal_offset = parameters[30];
+  trial_signal_dur = parameters[31];
+  trial_signal_freq = parameters[32];
+  grace_dur = parameters[33];
+  response_dur = parameters[34];
+  timeout_dur = parameters[35];
+  image_all = parameters[36];
+  image_ttl_dur = parameters[37];
+  track_period = parameters[38];
 
   if (session_type == 0) {
     trial_num = cs0_num + cs1_num + cs2_num;
@@ -336,28 +355,30 @@ void setup() {
   GetParams();
   Serial.println("Parameters processed");
 
-  // First trial
-  switch (iti_distro) {
-    case 0:
-      next_trial_ts = pre_session + mean_iti;
-      break;
-    case 1:
-      next_trial_ts = pre_session + behav.UniDistro(min_iti, max_iti);
-      break;
-    case 2:
-      next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
-      break;
-  }
+  if (session_type == code_classical_conditioning || session_type == code_go_nogo) {
+    // First trial
+    switch (iti_distro) {
+      case 0:
+        next_trial_ts = pre_session + mean_iti;
+        break;
+      case 1:
+        next_trial_ts = pre_session + behav.UniDistro(min_iti, max_iti);
+        break;
+      case 2:
+        next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
+        break;
+    }
 
-  // Shuffle trials
-  cs_trial_types = new () int[trial_num];
-  for (int tt = 0; tt < trial_num; tt++) {
-    // Assign appropriate number of CS+ trials
-    if (tt < cs0_num) cs_trial_types[tt] = 0;
-    else if (tt < cs0_num + cs1_num) cs_trial_types[tt] = 1;
-    else cs_trial_types[tt] = 2;
+    // Shuffle trials
+    cs_trial_types = new () int[trial_num];
+    for (int tt = 0; tt < trial_num; tt++) {
+      // Assign appropriate number of CS+ trials
+      if (tt < cs0_num) cs_trial_types[tt] = 0;
+      else if (tt < cs0_num + cs1_num) cs_trial_types[tt] = 1;
+      else cs_trial_types[tt] = 2;
+    }
+    behav.Shuffle(cs_trial_types, trial_num);
   }
-  behav.Shuffle(cs_trial_types, trial_num);
 
   // Wait for start signal
   Serial.println("Waiting for start signal ('E')");
@@ -369,7 +390,9 @@ void setup() {
 
   if (image_all) digitalWrite(pin_img_start, HIGH);
   Serial.println("Session started\n");
-  behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[0]);
+  if (session_type == code_classical_conditioning || session_type == code_go_nogo) {
+    behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[0]);
+  }
 }
 
 
@@ -387,11 +410,14 @@ void loop() {
 
   // -- 1. TRIAL CONTROL -- //
   switch (session_type) {
-    case 0:
+    case code_classical_conditioning:
       ClassicalConditioning(ts, lick_count);
       break;
-    case 1:
+    case code_go_nogo:
       GoNogo(ts, lick_count);
+      break;
+    case code_free_licking:
+      FreeLicking(ts, lick_count);
       break;
   }
 
@@ -412,7 +438,7 @@ void loop() {
   boolean lick_state_now;
   // lick_state_now = digitalRead(pin_lick);
   int lick_reading = analogRead(pin_lick);
-  if (lick_reading < 900) behav.SendData(stream, code_lick_form, ts, lick_reading);
+  if (lick_reading < LICK_REC_THRESHOLD) behav.SendData(stream, code_lick_form, ts, lick_reading);
   if (lick_reading < LICK_THRESHOLD) lick_state_now = true;
   else lick_state_now = false;
 
@@ -429,3 +455,4 @@ void loop() {
   }
   lick_state = lick_state_now;
 }
+
