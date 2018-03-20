@@ -1188,6 +1188,7 @@ class InputManager(ttk.Frame):
             session_time = self.var_session_dur.get()
         n_movement_frames = 2 * (session_time + self.parameters['pre_session'] + self.parameters['post_session']
             ) / self.parameters['track_period']
+        if not n_movement_frames: n_movement_frames = 1 # same reason for n_trial = 1 above
         chunk_size = (2, 1)
 
         self.grp_behav = self.grp_exp.create_group('behavior')
