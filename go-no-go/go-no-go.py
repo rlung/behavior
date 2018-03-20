@@ -17,6 +17,8 @@ Packages needed:
 
 TODO:
 - CS names
+- add graph of events
+- add weights as dataset to day group
 x scoreboard
 x link variable to ttk.Entry's
 x set up threads as daemons
@@ -173,6 +175,7 @@ class InputManager(ttk.Frame):
         # Variables
         self.var_presession = tk.IntVar()
         self.var_postsession = tk.IntVar()
+        self.var_session_dur = tk.IntVar()
         self.var_cs0_num = tk.IntVar()
         self.var_cs1_num = tk.IntVar()
         self.var_cs2_num = tk.IntVar()
@@ -210,6 +213,7 @@ class InputManager(ttk.Frame):
         self.var_image_all = tk.IntVar()
         self.var_image_ttl_dur = tk.IntVar()
         self.var_track_period = tk.IntVar()
+        self.var_use_cam = tk.BooleanVar()
         self.var_serial_status = tk.StringVar()
         self.var_verbose = tk.BooleanVar()
         self.var_print_arduino = tk.BooleanVar()
@@ -237,14 +241,15 @@ class InputManager(ttk.Frame):
         # Default variable values
         self.var_presession.set(60000)
         self.var_postsession.set(60000)
+        self.var_session_dur.set(20 * 60000)
         self.var_cs0_num.set(20)
         self.var_cs1_num.set(20)
         self.var_cs2_num.set(0)
         self.var_session_type.set(0)
-        self.var_iti_distro.set(1)
+        self.var_iti_distro.set(2)
         self.var_mean_iti.set(60000)
-        self.var_min_iti.set(40000)
-        self.var_max_iti.set(80000)
+        self.var_min_iti.set(25000)
+        self.var_max_iti.set(120000)
         self.var_pre_stim.set(7000)
         self.var_post_stim.set(13000)
         self.var_cs0_dur.set(2000)
@@ -262,7 +267,7 @@ class InputManager(ttk.Frame):
         self.var_cs2_pulse.set(0)
         self.var_us2_delay.set(3000)
         self.var_us2_dur.set(50)
-        self.var_consumption_dur.set(8000)
+        self.var_consumption_dur.set(10000)
         self.var_vac_dur.set(100)
         self.var_trial_signal_offset.set(2000)
         self.var_trial_signal_dur.set(1000)
@@ -310,8 +315,8 @@ class InputManager(ttk.Frame):
         frame_trial_params.columnconfigure(0, weight=1)
 
         ### Camera frame
-        frame_cam = ttk.Frame(frame_setup_col1)
-        frame_cam.grid(row=0, column=0, **opts_frame1)
+        frame_cam = ttk.LabelFrame(frame_setup_col1, text='Camera', **opts_labelframe)
+        frame_cam.grid(row=0, column=0, sticky='we', **opts_frame1)
 
         ### Arduino frame
         frame_arduino = ttk.LabelFrame(frame_setup_col1, text='Arduino', **opts_labelframe)
@@ -393,10 +398,12 @@ class InputManager(ttk.Frame):
 
         ### frame_session_type
         ### UI for choosing session type, ie, classical conditining vs go/no go.
+        self.radio_freelicking = ttk.Radiobutton(frame_session_type, text='Free licking', variable=self.var_session_type, value=2, command=self.update_param_preview)
         self.radio_conditioning = ttk.Radiobutton(frame_session_type, text='Classical conditioning', variable=self.var_session_type, value=0, command=self.update_param_preview)
         self.radio_gonogo = ttk.Radiobutton(frame_session_type, text='Go/no go', variable=self.var_session_type, value=1, command=self.update_param_preview)
-        self.radio_conditioning.grid(row=0, column=0, sticky='w')
-        self.radio_gonogo.grid(row=1, column=0, sticky='w')
+        self.radio_freelicking.grid(row=0, column=0, sticky='w')
+        self.radio_conditioning.grid(row=1, column=0, sticky='w')
+        self.radio_gonogo.grid(row=2, column=0, sticky='w')
 
         ### frame_session
         ### UI for session.
@@ -437,25 +444,27 @@ class InputManager(ttk.Frame):
         self.entry_image_ttl_dur.grid(row=1, column=1, sticky='w')
         self.entry_track_period.grid(row=2, column=1, sticky='w')
 
-        ## Camera preview
-        cam_x = 1280
-        cam_y = 1024
-        scale = 0.2
-        dpi = 300.
-        self.fig_preview = Figure(dpi=dpi, figsize=(cam_x / dpi * scale, cam_y / dpi * scale))
-        self.ax_preview = self.fig_preview.add_axes([0, 0, 1, 1])
-        self.fig_preview.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
-        self.im = self.ax_preview.imshow(np.zeros((1024, 1280)), vmin=1, vmax=254, cmap='gray', interpolation='none')
-        self.ax_preview.axis('image')
-        self.ax_preview.axis('off')
-        self.canvas_preview = FigureCanvasTkAgg(self.fig_preview, frame_cam)
-        self.canvas_preview.show()
-        self.canvas_preview.draw()
-        self.canvas_preview.get_tk_widget().grid(row=0, column=0, sticky='wens')
+        ## frame_cam
+        self.check_use_cam = ttk.Checkbutton(frame_cam, variable=self.var_use_cam, text='Use camera')
+        self.check_use_cam.grid(row=0, column=0)
+        # cam_x = 1280
+        # cam_y = 1024
+        # scale = 0.2
+        # dpi = 300.
+        # self.fig_preview = Figure(dpi=dpi, figsize=(cam_x / dpi * scale, cam_y / dpi * scale))
+        # self.ax_preview = self.fig_preview.add_axes([0, 0, 1, 1])
+        # self.fig_preview.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
+        # self.im = self.ax_preview.imshow(np.zeros((1024, 1280)), vmin=1, vmax=254, cmap='gray', interpolation='none')
+        # self.ax_preview.axis('image')
+        # self.ax_preview.axis('off')
+        # self.canvas_preview = FigureCanvasTkAgg(self.fig_preview, frame_cam)
+        # self.canvas_preview.show()
+        # self.canvas_preview.draw()
+        # self.canvas_preview.get_tk_widget().grid(row=0, column=0, sticky='wens')
 
-        ### Set high/low colors
-        self.im.cmap.set_under('b')
-        self.im.cmap.set_over('r')
+        # ### Set high/low colors
+        # self.im.cmap.set_under('b')
+        # self.im.cmap.set_over('r')
 
         ## frame_arduino
         ## Arduino setup
@@ -753,7 +762,10 @@ class InputManager(ttk.Frame):
     def set_params(self):
         session_type = self.var_session_type.get()
 
-        title_session = 'Go/no-go' if session_type else 'Classical conditioning'
+        title_session = \
+            'Go/no-go' if session_type == 1 else \
+            'Classical conditioning' if session_type == 0 else \
+            'Free licking'
         window_param = tk.Toplevel(self)
         window_param.wm_title('{} parameters'.format(title_session))
         window_param.grab_set()
@@ -773,76 +785,77 @@ class InputManager(ttk.Frame):
 
         frame_trial_col0 = ttk.Frame(frame_trial)
         frame_trial_col1 = ttk.Frame(frame_trial)
-        frame_trial_col0.grid(row=0, column=0, **opts_frame1)
-        frame_trial_col1.grid(row=0, column=1, **opts_frame1)
+        frame_trial_col0.grid(row=0, column=0, sticky='we', **opts_frame1)
+        frame_trial_col1.grid(row=0, column=1, sticky='we', **opts_frame1)
 
         frame_cs = ttk.Frame(frame_csus)
         frame_us = ttk.Frame(frame_csus)
         frame_cs.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_us.grid(row=0, column=1, sticky='we', **opts_frame1)
 
-        # frame_trial
-        # UI for trial.
-        radio_fixed_iti = ttk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)
-        radio_uniform_iti = ttk.Radiobutton(frame_trial_col0, text='Uniform distro', variable=self.var_iti_distro, value=1)
-        radio_expo_iti = ttk.Radiobutton(frame_trial_col0, text='Exponential distro', variable=self.var_iti_distro, value=2)
-        tk.Label(frame_trial_col0, text='ITI variability').grid(row=0, column=0, sticky='w')
-        radio_fixed_iti.grid(row=1, column=0, sticky='w')
-        radio_uniform_iti.grid(row=2, column=0, sticky='w')
-        radio_expo_iti.grid(row=3, column=0, sticky='w')
+        if session_type in [0, 1]:
+            # frame_trial
+            # UI for trial.
+            radio_fixed_iti = ttk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)
+            radio_uniform_iti = ttk.Radiobutton(frame_trial_col0, text='Uniform distro', variable=self.var_iti_distro, value=1)
+            radio_expo_iti = ttk.Radiobutton(frame_trial_col0, text='Exponential distro', variable=self.var_iti_distro, value=2)
+            tk.Label(frame_trial_col0, text='ITI variability').grid(row=0, column=0, sticky='w')
+            radio_fixed_iti.grid(row=1, column=0, sticky='w')
+            radio_uniform_iti.grid(row=2, column=0, sticky='w')
+            radio_expo_iti.grid(row=3, column=0, sticky='w')
 
-        self.entry_mean_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_mean_iti, **opts_entry10)
-        self.entry_min_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_min_iti, **opts_entry10)
-        self.entry_max_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_max_iti, **opts_entry10)
-        self.entry_pre_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_pre_stim, **opts_entry10)
-        self.entry_post_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_post_stim, **opts_entry10)
-        tk.Label(frame_trial_col1, text='Mean ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
-        tk.Label(frame_trial_col1, text='Min ITI (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
-        tk.Label(frame_trial_col1, text='Max ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
-        tk.Label(frame_trial_col1, text='Prestim time (ms): ', anchor='e').grid(row=6, column=0, sticky='e')
-        tk.Label(frame_trial_col1, text='Poststim time (ms): ', anchor='e').grid(row=7, column=0, sticky='e')
-        self.entry_mean_iti.grid(row=3, column=1, sticky='w')
-        self.entry_min_iti.grid(row=4, column=1, sticky='w')
-        self.entry_max_iti.grid(row=5, column=1, sticky='w')
-        self.entry_pre_stim.grid(row=6, column=1, sticky='w')
-        self.entry_post_stim.grid(row=7, column=1, sticky='w')
+            self.entry_mean_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_mean_iti, **opts_entry10)
+            self.entry_min_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_min_iti, **opts_entry10)
+            self.entry_max_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_max_iti, **opts_entry10)
+            self.entry_pre_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_pre_stim, **opts_entry10)
+            self.entry_post_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_post_stim, **opts_entry10)
+            tk.Label(frame_trial_col1, text='Mean ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
+            tk.Label(frame_trial_col1, text='Min ITI (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
+            tk.Label(frame_trial_col1, text='Max ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
+            tk.Label(frame_trial_col1, text='Prestim time (ms): ', anchor='e').grid(row=6, column=0, sticky='e')
+            tk.Label(frame_trial_col1, text='Poststim time (ms): ', anchor='e').grid(row=7, column=0, sticky='e')
+            self.entry_mean_iti.grid(row=3, column=1, sticky='w')
+            self.entry_min_iti.grid(row=4, column=1, sticky='w')
+            self.entry_max_iti.grid(row=5, column=1, sticky='w')
+            self.entry_pre_stim.grid(row=6, column=1, sticky='w')
+            self.entry_post_stim.grid(row=7, column=1, sticky='w')
 
-        # frame_csus
-        # UI for CS-US
-        self.entry_cs0_dur = ttk.Entry(frame_cs, textvariable=self.var_cs0_dur, **opts_entry10)
-        self.entry_cs0_freq = ttk.Entry(frame_cs, textvariable=self.var_cs0_freq, **opts_entry10)
-        self.entry_cs0_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs0_pulse, **opts_entry10)
-        self.entry_cs1_dur = ttk.Entry(frame_cs, textvariable=self.var_cs1_dur, **opts_entry10)
-        self.entry_cs1_freq = ttk.Entry(frame_cs, textvariable=self.var_cs1_freq, **opts_entry10)
-        self.entry_cs1_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs1_pulse, **opts_entry10)
-        tk.Label(frame_cs, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
-        tk.Label(frame_cs, text='f (s' u'\u207b\u00b9' ')', anchor='center').grid(row=0, column=2, sticky='we')
-        tk.Label(frame_cs, text='pulse (ms)', anchor='center').grid(row=0, column=3, sticky='we')
-        tk.Label(frame_cs, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_cs, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
-        self.entry_cs0_dur.grid(row=1, column=1, sticky='w')
-        self.entry_cs0_freq.grid(row=1, column=2, sticky='w')
-        self.entry_cs0_pulse.grid(row=1, column=3, sticky='w')
-        self.entry_cs1_dur.grid(row=2, column=1, sticky='w')
-        self.entry_cs1_freq.grid(row=2, column=2, sticky='w')
-        self.entry_cs1_pulse.grid(row=2, column=3, sticky='w')
+            # frame_csus
+            # UI for CS-US
+            self.entry_cs0_dur = ttk.Entry(frame_cs, textvariable=self.var_cs0_dur, **opts_entry10)
+            self.entry_cs0_freq = ttk.Entry(frame_cs, textvariable=self.var_cs0_freq, **opts_entry10)
+            self.entry_cs0_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs0_pulse, **opts_entry10)
+            self.entry_cs1_dur = ttk.Entry(frame_cs, textvariable=self.var_cs1_dur, **opts_entry10)
+            self.entry_cs1_freq = ttk.Entry(frame_cs, textvariable=self.var_cs1_freq, **opts_entry10)
+            self.entry_cs1_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs1_pulse, **opts_entry10)
+            tk.Label(frame_cs, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
+            tk.Label(frame_cs, text='f (s' u'\u207b\u00b9' ')', anchor='center').grid(row=0, column=2, sticky='we')
+            tk.Label(frame_cs, text='pulse (ms)', anchor='center').grid(row=0, column=3, sticky='we')
+            tk.Label(frame_cs, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
+            tk.Label(frame_cs, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
+            self.entry_cs0_dur.grid(row=1, column=1, sticky='w')
+            self.entry_cs0_freq.grid(row=1, column=2, sticky='w')
+            self.entry_cs0_pulse.grid(row=1, column=3, sticky='w')
+            self.entry_cs1_dur.grid(row=2, column=1, sticky='w')
+            self.entry_cs1_freq.grid(row=2, column=2, sticky='w')
+            self.entry_cs1_pulse.grid(row=2, column=3, sticky='w')
 
-        self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
-        self.entry_us1_dur = ttk.Entry(frame_us, textvariable=self.var_us1_dur, **opts_entry10)
-        tk.Label(frame_us, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
-        tk.Label(frame_us, text='US0: ', anchor='e').grid(row=1, column=0, sticky='e')
-        tk.Label(frame_us, text='US1: ', anchor='e').grid(row=2, column=0, sticky='e')
-        self.entry_us0_dur.grid(row=1, column=1, sticky='w')
-        self.entry_us1_dur.grid(row=2, column=1, sticky='w')
+            self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
+            self.entry_us1_dur = ttk.Entry(frame_us, textvariable=self.var_us1_dur, **opts_entry10)
+            tk.Label(frame_us, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
+            tk.Label(frame_us, text='US0: ', anchor='e').grid(row=1, column=0, sticky='e')
+            tk.Label(frame_us, text='US1: ', anchor='e').grid(row=2, column=0, sticky='e')
+            self.entry_us0_dur.grid(row=1, column=1, sticky='w')
+            self.entry_us1_dur.grid(row=2, column=1, sticky='w')
 
-        # frame_vac
-        # UI for vacuum.
-        self.entry_consumption_dur = ttk.Entry(frame_vac, textvariable=self.var_consumption_dur, **opts_entry10)
-        self.entry_vac_dur = ttk.Entry(frame_vac, textvariable=self.var_vac_dur, **opts_entry10)
-        tk.Label(frame_vac, text='Consumption time limit (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-        tk.Label(frame_vac, text='Vacuum duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-        self.entry_consumption_dur.grid(row=0, column=1, sticky='w')
-        self.entry_vac_dur.grid(row=1, column=1, sticky='w')
+            # frame_vac
+            # UI for vacuum.
+            self.entry_consumption_dur = ttk.Entry(frame_vac, textvariable=self.var_consumption_dur, **opts_entry10)
+            self.entry_vac_dur = ttk.Entry(frame_vac, textvariable=self.var_vac_dur, **opts_entry10)
+            tk.Label(frame_vac, text='Consumption time limit (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            tk.Label(frame_vac, text='Vacuum duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+            self.entry_consumption_dur.grid(row=0, column=1, sticky='w')
+            self.entry_vac_dur.grid(row=1, column=1, sticky='w')
 
         # frame_update
         # UI for 'Update' button
@@ -901,6 +914,15 @@ class InputManager(ttk.Frame):
             self.entry_response_dur.grid(row=4, column=1, sticky='w')
             self.entry_timeout_dur.grid(row=5, column=1, sticky='w')
 
+        elif session_type == 2:
+            self.entry_session_dur = ttk.Entry(frame_trial, textvariable=self.var_session_dur, **opts_entry10)
+            tk.Label(frame_trial, text='Session duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            self.entry_session_dur.grid(row=0, column=1, sticky='w')
+
+            self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
+            tk.Label(frame_us, text='US0 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            self.entry_us0_dur.grid(row=0, column=1, sticky='w')
+
     def update_param_preview(self):
         session_type = self.var_session_type.get()
         iti_type = self.var_iti_distro.get()
@@ -910,6 +932,21 @@ class InputManager(ttk.Frame):
         else:
             summary_iti = 'ITI: {} (mean), {} (min), {} (max)'.format(
                 self.var_mean_iti.get(), self.var_min_iti.get(), self.var_max_iti.get()
+            )
+
+        if session_type == 2:
+            # Free licking
+            summary_session = 'Session will last for {} ms (plus pre-/postsession)'.format(
+                self.var_session_dur.get(),
+            )
+            summary_us = 'US0: {}-ms delivery after lick'.format(
+                self.var_us0_dur.get()
+            )
+            summary_notes = 'CS parameters not used\nNo trials (be aware for imaging)'
+            summary = '{}\n{}\n{}'.format(
+                summary_session,
+                summary_us,
+                summary_notes,
             )
 
         if session_type == 0:
@@ -959,7 +996,8 @@ class InputManager(ttk.Frame):
                 summary_iti, summary_gonogo0, summary_gonogo1, summary_gonogo2, summary_gonogo3, summary_gonogo4, summary_gonogo5
             )
 
-        summary += '\nUS will be removed after {} ms'.format(self.var_consumption_dur.get())
+        if session_type in {0, 1}:
+            summary += '\nUS will be removed after {} ms'.format(self.var_consumption_dur.get())
 
         self.text_params.delete(0.0, 'end')
         self.text_params.insert(0.0, summary)
@@ -1006,6 +1044,7 @@ class InputManager(ttk.Frame):
         self.parameters['session_type'] = self.var_session_type.get()
         self.parameters['pre_session'] = self.var_presession.get()
         self.parameters['post_session'] = self.var_postsession.get()
+        self.parameters['session_dur'] = self.var_session_dur.get()
         self.parameters['cs0_num'] = self.var_cs0_num.get()
         self.parameters['cs1_num'] = self.var_cs1_num.get()
         self.parameters['cs2_num'] = self.var_cs2_num.get()
@@ -1127,23 +1166,27 @@ class InputManager(ttk.Frame):
         # Create group for experiment
         # Append to existing file (if applicable). If group already exists, append number to name.
         date = str(datetime.now().date())
+        subj = self.var_subject.get() or '?'
         index = 0
         file_index = ''
         while True:
             try:
-                self.grp_exp = self.data_file.create_group('{}/{}'.format(self.var_subject.get(), date + file_index))
+                self.grp_exp = self.data_file.create_group('{}/{}'.format(subj, date + file_index))
             except (RuntimeError, ValueError):
                 index += 1
                 file_index = '-' + str(index)
             else:
                 break
-        self.grp_exp.attrs['weight'] = self.var_weight.get()
+        self.grp_exp['weight'] = self.var_weight.get()
 
         # Initialize datasets
         n_trials = self.parameters['cs0_num'] + self.parameters['cs1_num'] + self.parameters['cs2_num']
-        n_movement_frames = 2 * (
-            n_trials * self.parameters['mean_iti'] + 
-            self.parameters['pre_session'] + self.parameters['post_session']
+        if n_trials:
+            session_time = n_trials * self.parameters['mean_iti']
+        else:
+            n_trials = 1   # in order for chunk to work dataset needs to be bigger than chunk size
+            session_time = self.var_session_dur.get()
+        n_movement_frames = 2 * (session_time + self.parameters['pre_session'] + self.parameters['post_session']
             ) / self.parameters['track_period']
         chunk_size = (2, 1)
 
@@ -1154,7 +1197,7 @@ class InputManager(ttk.Frame):
         self.grp_behav.create_dataset(name='trial_start', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
         self.grp_behav.create_dataset(name='trial_signal', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
         self.grp_behav.create_dataset(name='cs', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
-        self.grp_behav.create_dataset(name='us', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
+        self.grp_behav.create_dataset(name='us', dtype='uint32', shape=(2, n_movement_frames), chunks=chunk_size)
         self.grp_behav.create_dataset(name='response', dtype='uint32', shape=(2, n_trials), chunks=chunk_size)
 
         # self.grp_cam = self.data_file.create_group('cam')
