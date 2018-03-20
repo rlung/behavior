@@ -84,7 +84,9 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
     // Deliver CS
     if (! stimmed && ts >= ts_stim) {
       stimmed = true;
-      tone(pin_tone, trial_tone_freq, trial_tone_dur);
+      if (trial_tone_dur) {
+        tone(pin_tone, trial_tone_freq, trial_tone_dur);
+      }
       behav.SendData(stream, code_cs_start, ts, cs_trial_types[trial_ix]);
     }
 
