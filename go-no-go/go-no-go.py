@@ -239,22 +239,22 @@ class InputManager(ttk.Frame):
         self.var_next_trial_type = tk.StringVar()
 
         # Default variable values
-        self.var_presession.set(60000)
-        self.var_postsession.set(60000)
-        self.var_session_dur.set(20 * 60000)
-        self.var_cs0_num.set(20)
-        self.var_cs1_num.set(20)
+        self.var_presession.set(0)
+        self.var_postsession.set(0)
+        self.var_session_dur.set(1200000)
+        self.var_cs0_num.set(100)
+        self.var_cs1_num.set(0)
         self.var_cs2_num.set(0)
         self.var_session_type.set(0)
-        self.var_iti_distro.set(2)
-        self.var_mean_iti.set(60000)
-        self.var_min_iti.set(25000)
-        self.var_max_iti.set(120000)
-        self.var_pre_stim.set(7000)
-        self.var_post_stim.set(13000)
+        self.var_iti_distro.set(1)
+        self.var_mean_iti.set(8000)
+        self.var_min_iti.set(8000)
+        self.var_max_iti.set(12000)
+        self.var_pre_stim.set(0)
+        self.var_post_stim.set(8000)
         self.var_cs0_dur.set(2000)
-        self.var_cs0_freq.set(3000)
-        self.var_cs0_pulse.set(0)
+        self.var_cs0_freq.set(6000)
+        self.var_cs0_pulse.set(100)
         self.var_us0_delay.set(3000)
         self.var_us0_dur.set(50)
         self.var_cs1_dur.set(2000)
@@ -267,8 +267,8 @@ class InputManager(ttk.Frame):
         self.var_cs2_pulse.set(0)
         self.var_us2_delay.set(3000)
         self.var_us2_dur.set(50)
-        self.var_consumption_dur.set(10000)
-        self.var_vac_dur.set(100)
+        self.var_consumption_dur.set(0)
+        self.var_vac_dur.set(25)
         self.var_trial_signal_offset.set(2000)
         self.var_trial_signal_dur.set(1000)
         self.var_trial_signal_freq.set(0)
@@ -929,7 +929,11 @@ class InputManager(ttk.Frame):
 
         if iti_type == 0:
             summary_iti = 'ITI: {}'.format(self.var_mean_iti.get())
-        else:
+        elif iti_type == 1:
+            summary_iti = 'ITI: {} (min), {} (max)'.format(
+                self.var_mean_iti.get(), self.var_min_iti.get(), self.var_max_iti.get()
+            )
+        elif iti_type == 2:
             summary_iti = 'ITI: {} (mean), {} (min), {} (max)'.format(
                 self.var_mean_iti.get(), self.var_min_iti.get(), self.var_max_iti.get()
             )
