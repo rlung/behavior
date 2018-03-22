@@ -5,9 +5,9 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
   static unsigned long ts_trial_start;
   static unsigned long ts_trial_signal;
   static unsigned long ts_stim;
-  static unsigned long ts_response_window;
+  static unsigned long ts_response_window_start;
+  static unsigned long ts_response_window_end;
   static unsigned long ts_us;
-  static unsigned long ts_timeout;
   static unsigned long ts_trial_end;
   static unsigned int trial_ix;
   static unsigned int trial_tone_freq;    // Defines tone frequency for trial
@@ -60,8 +60,8 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
     ts_trial_start = ts;
     ts_trial_signal = ts_trial_start + pre_stim - trial_signal_offset;
     ts_stim = ts_trial_start + pre_stim;
-    ts_response_window = ts_stim + grace_dur;
-    ts_timeout = ts_response_window + response_dur;
+    ts_response_window_start = ts_stim + grace_dur;
+    ts_response_window_end = ts_response_window_start + response_dur;
     ts_trial_end = ts_trial_start + trial_dur;
 
     // Start imaging (if applicable)
@@ -104,7 +104,7 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
     }
 
     // Deliver US (if responded)
-    if (! responded && ts >= ts_response_window && ts < ts_timeout) {
+    if (! responded && ts >= ts_response_window_start && ts < ts_response_window_end) {
       if (! response_started) {
         response_started = true;
         response_licks_base = lick_count;
@@ -120,7 +120,7 @@ void GoNogo(unsigned long ts, unsigned int lick_count) {
         }
       }
     }
-    if (! responded && lick_count - response_licks_base <= 0 && ts >= ts_timeout) {
+    if (! responded && lick_count - response_licks_base <= 0 && ts >= ts_response_window_end) {
       responded = true;
       behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 0);
     }
