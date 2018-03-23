@@ -16,9 +16,10 @@ Packages needed:
 
 
 TODO:
+- reset counter for responses
 - CS names
 - add graph of events
-- add weights as dataset to day group
+x add weights as dataset to day group
 x scoreboard
 x link variable to ttk.Entry's
 x set up threads as daemons
@@ -237,7 +238,6 @@ class InputManager(ttk.Frame):
         self.var_counter_cs1_responses = tk.IntVar()
         self.var_counter_cs2_responses = tk.IntVar()
         self.var_counter_us = tk.IntVar()
-        self.var_counter_response = tk.IntVar()
         self.var_next_trial_time = tk.StringVar()
         self.var_next_trial_type = tk.StringVar()
 
@@ -723,13 +723,15 @@ class InputManager(ttk.Frame):
                 self.var_counter_trial_signal,
                 self.var_counter_cs,
                 self.var_counter_us,
-                self.var_counter_response,
             ])
         }
         self.counter_gui = [
             self.var_counter_cs0,
             self.var_counter_cs1,
             self.var_counter_cs2,
+            self.var_counter_cs0_responses,
+            self.var_counter_cs1_responses,
+            self.var_counter_cs2_responses,
             self.var_counter_lick_onset,
         ]
 
