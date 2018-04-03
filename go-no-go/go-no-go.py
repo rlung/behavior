@@ -16,9 +16,10 @@ Packages needed:
 
 
 TODO:
+- reset counter for responses
 - CS names
 - add graph of events
-- add weights as dataset to day group
+x add weights as dataset to day group
 x scoreboard
 x link variable to ttk.Entry's
 x set up threads as daemons
@@ -233,8 +234,11 @@ class InputManager(ttk.Frame):
         self.var_counter_cs0 = tk.IntVar()
         self.var_counter_cs1 = tk.IntVar()
         self.var_counter_cs2 = tk.IntVar()
-        self.var_counter_us = tk.IntVar()
         self.var_counter_response = tk.IntVar()
+        self.var_counter_cs0_responses = tk.IntVar()
+        self.var_counter_cs1_responses = tk.IntVar()
+        self.var_counter_cs2_responses = tk.IntVar()
+        self.var_counter_us = tk.IntVar()
         self.var_next_trial_time = tk.StringVar()
         self.var_next_trial_type = tk.StringVar()
 
@@ -242,14 +246,14 @@ class InputManager(ttk.Frame):
         self.var_presession.set(0)
         self.var_postsession.set(0)
         self.var_session_dur.set(1200000)
-        self.var_cs0_num.set(100)
+        self.var_cs0_num.set(200)
         self.var_cs1_num.set(0)
         self.var_cs2_num.set(0)
-        self.var_session_type.set(0)
-        self.var_iti_distro.set(1)
-        self.var_mean_iti.set(8000)
+        self.var_session_type.set(1)
+        self.var_iti_distro.set(2)
+        self.var_mean_iti.set(10000)
         self.var_min_iti.set(8000)
-        self.var_max_iti.set(12000)
+        self.var_max_iti.set(20000)
         self.var_pre_stim.set(0)
         self.var_post_stim.set(8000)
         self.var_cs0_dur.set(2000)
@@ -258,7 +262,7 @@ class InputManager(ttk.Frame):
         self.var_us0_delay.set(3000)
         self.var_us0_dur.set(50)
         self.var_cs1_dur.set(2000)
-        self.var_cs1_freq.set(6000)
+        self.var_cs1_freq.set(12000)
         self.var_cs1_pulse.set(0)
         self.var_us1_delay.set(3000)
         self.var_us1_dur.set(50)
@@ -269,11 +273,11 @@ class InputManager(ttk.Frame):
         self.var_us2_dur.set(50)
         self.var_consumption_dur.set(0)
         self.var_vac_dur.set(25)
-        self.var_trial_signal_offset.set(2000)
-        self.var_trial_signal_dur.set(1000)
+        self.var_trial_signal_offset.set(0)
+        self.var_trial_signal_dur.set(0)
         self.var_trial_signal_freq.set(0)
-        self.var_grace_dur.set(2000)
-        self.var_response_dur.set(2000)
+        self.var_grace_dur.set(500)
+        self.var_response_dur.set(3500)
         self.var_timeout_dur.set(8000)
         self.var_image_all.set(0)
         self.var_image_ttl_dur.set(100)
@@ -370,6 +374,7 @@ class InputManager(ttk.Frame):
         frame_monitor_col0.grid(row=0, column=0, sticky='we')
         frame_monitor_col1.grid(row=0, column=1, sticky='we')
         frame_monitor_col2.grid(row=0, column=2, sticky='we')
+        frame_monitor_col2.grid_columnconfigure(0, weight=1)
 
         ### Solenoid frame
         frame_sol = ttk.Frame(frame_monitor_col0)
@@ -390,6 +395,10 @@ class InputManager(ttk.Frame):
         frame_count = ttk.Frame(frame_monitor_col2)
         frame_count.grid(row=1, column=2, sticky='we', **opts_frame1)
         frame_count.grid_columnconfigure(0, weight=1)
+        frame_count_row0 = ttk.Frame(frame_count)
+        frame_count_row1 = ttk.Frame(frame_count)
+        frame_count_row0.grid(row=0, column=0, sticky='we', pady=5)
+        frame_count_row1.grid(row=1, column=0, sticky='we', pady=5)
 
         # Add GUI components
 
@@ -616,14 +625,20 @@ class InputManager(ttk.Frame):
         ttk.Entry(frame_next, textvariable=self.var_next_trial_type, state='readonly', **opts_entry10).grid(row=1, column=1)
 
         # frame_count
-        ttk.Label(frame_count, text='CS0 count: ', anchor='e').grid(row=0, column=0, sticky='e')
-        ttk.Label(frame_count, text='CS1 count: ', anchor='e').grid(row=1, column=0, sticky='e')
-        ttk.Label(frame_count, text='CS2 count: ', anchor='e').grid(row=2, column=0, sticky='e')
-        ttk.Label(frame_count, text='Lick count: ', anchor='e').grid(row=3, column=0, sticky='e')
-        ttk.Entry(frame_count, textvariable=self.var_counter_cs0, state='readonly', **opts_entry10).grid(row=0, column=1)
-        ttk.Entry(frame_count, textvariable=self.var_counter_cs1, state='readonly', **opts_entry10).grid(row=1, column=1)
-        ttk.Entry(frame_count, textvariable=self.var_counter_cs2, state='readonly', **opts_entry10).grid(row=2, column=1)
-        ttk.Entry(frame_count, textvariable=self.var_counter_lick_onset, state='readonly', **opts_entry10).grid(row=3, column=1)
+        ttk.Label(frame_count_row0, text='Count', anchor='center').grid(row=0, column=1, sticky='we')
+        ttk.Label(frame_count_row0, text='Response', anchor='center').grid(row=0, column=2, sticky='we')
+        ttk.Label(frame_count_row0, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
+        ttk.Label(frame_count_row0, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
+        ttk.Label(frame_count_row0, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
+        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs0, state='readonly', **opts_entry10).grid(row=1, column=1, sticky='e')
+        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs1, state='readonly', **opts_entry10).grid(row=2, column=1, sticky='e')
+        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs2, state='readonly', **opts_entry10).grid(row=3, column=1, sticky='e')
+        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs0_responses, state='readonly', **opts_entry10).grid(row=1, column=2, sticky='e')
+        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs1_responses, state='readonly', **opts_entry10).grid(row=2, column=2, sticky='e')
+        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs2_responses, state='readonly', **opts_entry10).grid(row=3, column=2, sticky='e')
+
+        ttk.Label(frame_count_row1, text='Lick count: ', anchor='e').grid(row=4, column=0, sticky='e')
+        ttk.Entry(frame_count_row1, textvariable=self.var_counter_lick_onset, state='readonly', **opts_entry10).grid(row=4, column=1, sticky='e')
 
         ## Group GUI objects
         self.obj_to_disable_at_open = [
@@ -708,14 +723,17 @@ class InputManager(ttk.Frame):
                 self.var_counter_trial_start,
                 self.var_counter_trial_signal,
                 self.var_counter_cs,
-                self.var_counter_us,
                 self.var_counter_response,
+                self.var_counter_us,
             ])
         }
         self.counter_gui = [
             self.var_counter_cs0,
             self.var_counter_cs1,
             self.var_counter_cs2,
+            self.var_counter_cs0_responses,
+            self.var_counter_cs1_responses,
+            self.var_counter_cs2_responses,
             self.var_counter_lick_onset,
         ]
 
@@ -931,7 +949,7 @@ class InputManager(ttk.Frame):
             summary_iti = 'ITI: {}'.format(self.var_mean_iti.get())
         elif iti_type == 1:
             summary_iti = 'ITI: {} (min), {} (max)'.format(
-                self.var_mean_iti.get(), self.var_min_iti.get(), self.var_max_iti.get()
+                self.var_min_iti.get(), self.var_max_iti.get()
             )
         elif iti_type == 2:
             summary_iti = 'ITI: {} (mean), {} (min), {} (max)'.format(
@@ -1303,14 +1321,21 @@ class InputManager(ttk.Frame):
             if code == code_lick:
                 if data == 1:
                     self.var_counter_lick_onset.set(self.var_counter_lick_onset.get() + 1)
-            if code == code_cs_start:
+            elif code == code_cs_start:
                 if data == 0:
                     self.var_counter_cs0.set(self.var_counter_cs0.get() + 1)
                 elif data == 1:
                     self.var_counter_cs1.set(self.var_counter_cs1.get() + 1)
                 elif data == 2:
                     self.var_counter_cs2.set(self.var_counter_cs2.get() + 1)
-            if code == code_next_trial:
+            elif code == code_response:
+                if data == 1:
+                    self.var_counter_cs0_responses.set(self.var_counter_cs0_responses.get() + 1)
+                if data == 3:
+                    self.var_counter_cs1_responses.set(self.var_counter_cs1_responses.get() + 1)
+                if data == 5:
+                    self.var_counter_cs2_responses.set(self.var_counter_cs2_responses.get() + 1)
+            elif code == code_next_trial:
                 self.var_next_trial_time.set((self.start_time + timedelta(milliseconds=ts)).strftime('%H:%M:%S'))
                 self.var_next_trial_type.set(data)
 
