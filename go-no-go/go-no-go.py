@@ -16,7 +16,10 @@ Packages needed:
 
 
 TODO:
-- reset counter for responses
+- end trial at lick
+- add period where animals can't lick
+- add random deliveries that are automatically vacuumed (to deal with evap)
+x reset counter for responses
 - CS names
 - add graph of events
 x add weights as dataset to day group
@@ -65,6 +68,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib import style
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from slackclient import SlackClient
+from flask import Flask, render_template
 import pdb
 
 
@@ -136,6 +140,8 @@ events = [
     'response',
 ]
 
+# Flask keys
+flask_keys = ['cs0', 'cs1', 'cs2', 'cs0_responses', 'cs1_responses', 'cs2_responses', 'lick_onsets']
 
 class InputManager(ttk.Frame):
 
@@ -234,6 +240,7 @@ class InputManager(ttk.Frame):
         self.var_counter_cs0 = tk.IntVar()
         self.var_counter_cs1 = tk.IntVar()
         self.var_counter_cs2 = tk.IntVar()
+        self.var_counter_response= tk.IntVar()
         self.var_counter_cs0_responses = tk.IntVar()
         self.var_counter_cs1_responses = tk.IntVar()
         self.var_counter_cs2_responses = tk.IntVar()
@@ -248,11 +255,11 @@ class InputManager(ttk.Frame):
         self.var_cs0_num.set(100)
         self.var_cs1_num.set(0)
         self.var_cs2_num.set(0)
-        self.var_session_type.set(0)
+        self.var_session_type.set(1)
         self.var_iti_distro.set(1)
-        self.var_mean_iti.set(8000)
+        self.var_mean_iti.set(10000)
         self.var_min_iti.set(8000)
-        self.var_max_iti.set(12000)
+        self.var_max_iti.set(20000)
         self.var_pre_stim.set(0)
         self.var_post_stim.set(8000)
         self.var_cs0_dur.set(2000)
@@ -272,11 +279,11 @@ class InputManager(ttk.Frame):
         self.var_us2_dur.set(50)
         self.var_consumption_dur.set(0)
         self.var_vac_dur.set(25)
-        self.var_trial_signal_offset.set(2000)
-        self.var_trial_signal_dur.set(1000)
+        self.var_trial_signal_offset.set(0)
+        self.var_trial_signal_dur.set(0)
         self.var_trial_signal_freq.set(0)
-        self.var_grace_dur.set(2000)
-        self.var_response_dur.set(2000)
+        self.var_grace_dur.set(500)
+        self.var_response_dur.set(3500)
         self.var_timeout_dur.set(8000)
         self.var_image_all.set(0)
         self.var_image_ttl_dur.set(100)
@@ -722,6 +729,7 @@ class InputManager(ttk.Frame):
                 self.var_counter_trial_start,
                 self.var_counter_trial_signal,
                 self.var_counter_cs,
+                self.var_counter_response,
                 self.var_counter_us,
             ])
         }
@@ -734,6 +742,23 @@ class InputManager(ttk.Frame):
             self.var_counter_cs2_responses,
             self.var_counter_lick_onset,
         ]
+
+        # Setup Flask
+        self.q_from_tk = Queue()
+        self.q_from_flask = Queue()
+
+        thread_flask = threading.Thread(target=flask_setup, args=(self.q_from_tk, self.q_from_flask))
+        thread_flask.daemon = True
+        thread_flask.start()
+
+        self.parent.after(0, self.listen_for_flask)
+
+    def listen_for_flask(self):
+        if not self.q_from_flask.empty():
+            self.q_from_flask.get()   # Just
+            data_to_flask = {key: val.get() for key, val in zip(flask_keys, self.counter_gui)}
+            self.q_from_tk.put(data_to_flask)
+        self.parent.after(500, self.listen_for_flask)
 
     def gui_util(self, option):
         '''Updates GUI components
@@ -1437,6 +1462,25 @@ def scan_serial(q_serial, ser, print_arduino=False, suppress=[]):
                 # q_to_rec_thread.put(0)
                 if print_arduino: print('  Scan complete.')
                 return
+
+
+def flask_setup(q_from_tk, q_from_flask):
+    app = Flask('viewer')
+
+    @app.route('/')
+    def index():
+        q_from_flask.put(1)
+
+        # Wait for data
+        while q_from_tk.empty(): pass
+        print('Received data from tkinter')
+        
+        # Process data
+        data_from_tk = q_from_tk.get()
+
+        return render_template('index.html', **data_from_tk)
+    
+    app.run()
 
 
 def main():
