@@ -22,7 +22,57 @@ or not (CS is second bit, lick is first bit, eg, 3 is CS 1, lick; 2 is CS 1 no
 lick).
 
 Example input:
-0, 60000, 60000, 20, 20, 0, 1, 60000, 40000, 80000, 7000, 13000, 2000, 3000, 0, 50, 3000, 2000, 6000, 0, 50, 3000, 2000, 12000, 0, 50, 3000, 8000, 100, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
+(need to update with running variables) 0, 60000, 60000, 20, 20, 0, 1, 60000, 40000, 80000, 7000, 13000, 2000, 3000, 0, 50, 3000, 2000, 6000, 0, 50, 3000, 2000, 12000, 0, 50, 3000, 8000, 100, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
+(free_licking_run) 3,5000,5000,60000, 0,0,0, 0,0,0,0, 0,0, 0,0,0,50,5000,0, 50,0, 0,0,0,0,0,0, 0,0, 0,0,0,0,0,0, 0,0, 500,0,0, 0,0,0, 0,0,0, 0,0,50
+unsigned int session_type;
+unsigned long pre_session;
+unsigned long post_session;
+unsigned long session_dur;
+int cs0_num;
+int cs1_num;
+int cs2_num;
+boolean iti_distro;
+unsigned long mean_iti;
+unsigned long min_iti;
+unsigned long max_iti;
+unsigned long pre_stim;
+unsigned long post_stim;
+unsigned long cs0_dur;
+unsigned long cs0_freq;
+unsigned long cs0_pulse_dur;
+unsigned long cr0_min;
+unsigned long cr0_max;
+unsigned long cr0_dur;
+unsigned long us0_dur;
+unsigned long us0_delay;
+unsigned long cs1_dur;
+unsigned long cs1_freq;
+unsigned long cs1_pulse_dur;
+unsigned long cr1_min;
+unsigned long cr1_max;
+unsigned long cr1_dur;
+unsigned long us1_dur;
+unsigned long us1_delay;
+unsigned long cs2_dur;
+unsigned long cs2_freq;
+unsigned long cs2_pulse_dur;
+unsigned long cr2_min;
+unsigned long cr2_max;
+unsigned long cr2_dur;
+unsigned long us2_dur;
+unsigned long us2_delay;
+unsigned long response_period;
+unsigned long consumption_dur;
+unsigned long vac_dur;
+unsigned long trial_signal_offset;
+unsigned long trial_signal_dur;
+unsigned long trial_signal_freq;
+unsigned long grace_dur;
+unsigned long response_dur;
+unsigned long timeout_dur;
+boolean image_all;
+unsigned int image_ttl_dur;
+unsigned int track_period;
 
 */
 
@@ -83,6 +133,8 @@ const int code_next_trial = 8;
 const int code_free_licking = 2;
 const int code_classical_conditioning = 0;
 const int code_go_nogo = 1;
+const int code_free_licking_run = 3;
+const int code_go_nogo_run = 4;
 
 // Variables via serial
 unsigned int session_type;
@@ -101,18 +153,28 @@ unsigned long post_stim;
 unsigned long cs0_dur;
 unsigned long cs0_freq;
 unsigned long cs0_pulse_dur;
+unsigned long cr0_min;
+unsigned long cr0_max;
+unsigned long cr0_dur;
 unsigned long us0_dur;
 unsigned long us0_delay;
 unsigned long cs1_dur;
 unsigned long cs1_freq;
 unsigned long cs1_pulse_dur;
+unsigned long cr1_min;
+unsigned long cr1_max;
+unsigned long cr1_dur;
 unsigned long us1_dur;
 unsigned long us1_delay;
 unsigned long cs2_dur;
 unsigned long cs2_freq;
 unsigned long cs2_pulse_dur;
+unsigned long cr2_min;
+unsigned long cr2_max;
+unsigned long cr2_dur;
 unsigned long us2_dur;
 unsigned long us2_delay;
+unsigned long response_period;
 unsigned long consumption_dur;
 unsigned long vac_dur;
 unsigned long trial_signal_offset;
@@ -275,7 +337,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 39;
+  const int paramNum = 49;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -298,29 +360,39 @@ void GetParams() {
   cs0_dur = parameters[13];
   cs0_freq = parameters[14];
   cs0_pulse_dur = parameters[15];
-  us0_dur = parameters[16];
-  us0_delay = parameters[17];
-  cs1_dur = parameters[18];
-  cs1_freq = parameters[19];
-  cs1_pulse_dur = parameters[20];
-  us1_dur = parameters[21];
-  us1_delay = parameters[22];
-  cs2_dur = parameters[23];
-  cs2_freq = parameters[24];
-  cs2_pulse_dur = parameters[25];
-  us2_dur = parameters[26];
-  us2_delay = parameters[27];
-  consumption_dur = parameters[28];
-  vac_dur = parameters[29];
-  trial_signal_offset = parameters[30];
-  trial_signal_dur = parameters[31];
-  trial_signal_freq = parameters[32];
-  grace_dur = parameters[33];
-  response_dur = parameters[34];
-  timeout_dur = parameters[35];
-  image_all = parameters[36];
-  image_ttl_dur = parameters[37];
-  track_period = parameters[38];
+  cr0_min = parameters[16];
+  cr0_max = parameters[17];
+  cr0_dur = parameters[18];
+  us0_dur = parameters[19];
+  us0_delay = parameters[20];
+  cs1_dur = parameters[21];
+  cs1_freq = parameters[22];
+  cs1_pulse_dur = parameters[23];
+  cr1_min = parameters[24];
+  cr1_max = parameters[25];
+  cr1_dur = parameters[26];
+  us1_dur = parameters[27];
+  us1_delay = parameters[28];
+  cs2_dur = parameters[29];
+  cs2_freq = parameters[30];
+  cs2_pulse_dur = parameters[31];
+  cr2_min = parameters[32];
+  cr2_max = parameters[33];
+  cr2_dur = parameters[34];
+  us2_dur = parameters[35];
+  us2_delay = parameters[36];
+  response_period = parameters[37];
+  consumption_dur = parameters[38];
+  vac_dur = parameters[39];
+  trial_signal_offset = parameters[40];
+  trial_signal_dur = parameters[41];
+  trial_signal_freq = parameters[42];
+  grace_dur = parameters[43];
+  response_dur = parameters[44];
+  timeout_dur = parameters[45];
+  image_all = parameters[46];
+  image_ttl_dur = parameters[47];
+  track_period = parameters[48];
 
   if (session_type == 0) {
     trial_num = cs0_num + cs1_num + cs2_num;
@@ -398,8 +470,9 @@ void setup() {
 
 void loop() {
   static unsigned long next_track_ts = track_period;  // Timer used for motion tracking and conveyor movement
+  static long cumul_dist = 0;
   static unsigned int lick_count = 0;
-  static boolean lick_state;
+  static boolean lick_state = false;
 
   static const unsigned long start = millis();  // record start of session
   unsigned long ts = millis() - start;          // current timestamp
@@ -419,6 +492,12 @@ void loop() {
     case code_free_licking:
       FreeLicking(ts, lick_count);
       break;
+    case code_free_licking_run:
+      FreeLickingRun(ts, cumul_dist);
+      break;
+    case code_go_nogo_run:
+      GoNogoRun(ts, cumul_dist);
+      break;
   }
 
   // -- 2. TRACK MOVEMENT -- //
@@ -426,6 +505,7 @@ void loop() {
     // Check for movement
     if (track_change != 0) {
       behav.SendData(stream, code_track, ts, track_change);
+      cumul_dist = cumul_dist + track_change;
       track_change = 0;
     }
     
