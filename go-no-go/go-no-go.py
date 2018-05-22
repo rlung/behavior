@@ -136,6 +136,13 @@ events = [
     'response',
 ]
 
+# Session types
+type_freelicking = 2
+type_classical = 0
+type_gonogo = 1
+type_run = 3
+type_gonogo_run = 4
+
 
 class InputManager(ttk.Frame):
 
@@ -269,8 +276,8 @@ class InputManager(ttk.Frame):
         self.var_cs0_dur.set(2000)
         self.var_cs0_freq.set(6000)
         self.var_cs0_pulse.set(100)
-        self.var_cr0_min.set(0)
-        self.var_cr0_max.set(0)
+        self.var_cr0_min.set(100)
+        self.var_cr0_max.set(5000)
         self.var_cr0_dur.set(0)
         self.var_us0_delay.set(3000)
         self.var_us0_dur.set(50)
@@ -427,12 +434,16 @@ class InputManager(ttk.Frame):
 
         ### frame_session_type
         ### UI for choosing session type, ie, classical conditining vs go/no go.
-        self.radio_freelicking = ttk.Radiobutton(frame_session_type, text='Free licking', variable=self.var_session_type, value=2, command=self.update_param_preview)
-        self.radio_conditioning = ttk.Radiobutton(frame_session_type, text='Classical conditioning', variable=self.var_session_type, value=0, command=self.update_param_preview)
-        self.radio_gonogo = ttk.Radiobutton(frame_session_type, text='Go/no go', variable=self.var_session_type, value=1, command=self.update_param_preview)
+        self.radio_freelicking = ttk.Radiobutton(frame_session_type, text='Free licking', variable=self.var_session_type, value=type_freelicking, command=self.update_param_preview)
+        self.radio_conditioning = ttk.Radiobutton(frame_session_type, text='Classical conditioning', variable=self.var_session_type, value=type_classical, command=self.update_param_preview)
+        self.radio_gonogo = ttk.Radiobutton(frame_session_type, text='Go/no go', variable=self.var_session_type, value=type_gonogo, command=self.update_param_preview)
+        self.radio_run = ttk.Radiobutton(frame_session_type, text='Run', variable=self.var_session_type, value=type_run, command=self.update_param_preview)
+        self.radio_gonogo_run = ttk.Radiobutton(frame_session_type, text='Go/no go - run', variable=self.var_session_type, value=type_gonogo_run, command=self.update_param_preview)
         self.radio_freelicking.grid(row=0, column=0, sticky='w')
         self.radio_conditioning.grid(row=1, column=0, sticky='w')
         self.radio_gonogo.grid(row=2, column=0, sticky='w')
+        self.radio_run.grid(row=3, column=0, sticky='w')
+        self.radio_gonogo_run.grid(row=4, column=0, sticky='w')
 
         ### frame_session
         ### UI for session.
@@ -803,7 +814,9 @@ class InputManager(ttk.Frame):
         title_session = \
             'Go/no-go' if session_type == 1 else \
             'Classical conditioning' if session_type == 0 else \
-            'Free licking'
+            'Free licking' if session_type == 2 else \
+            'Free licking - run' if session_type == 3 else \
+            'Go/no-go - run'
         window_param = tk.Toplevel(self)
         window_param.wm_title('{} parameters'.format(title_session))
         window_param.grab_set()
@@ -831,7 +844,7 @@ class InputManager(ttk.Frame):
         frame_cs.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_us.grid(row=0, column=1, sticky='we', **opts_frame1)
 
-        if session_type in [0, 1]:
+        if session_type in {type_classical, type_gonogo}:
             # frame_trial
             # UI for trial.
             radio_fixed_iti = ttk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)
@@ -900,7 +913,7 @@ class InputManager(ttk.Frame):
         button_update = ttk.Button(frame_update, text='Update', command=lambda: [self.update_param_preview(), window_param.destroy()], **opts_button)
         button_update.grid(row=0, column=0, **opts_button_grid)
 
-        if session_type == 0:
+        if session_type == type_classical:
             # Classical conditioning
 
             frame_csus2 = ttk.Frame(window_param)
@@ -925,7 +938,7 @@ class InputManager(ttk.Frame):
             self.entry_us1_delay.grid(row=2, column=2, sticky='w')
             self.entry_us2_delay.grid(row=3, column=2, sticky='w')
             
-        elif session_type == 1:
+        elif session_type == type_gonogo:
             # Go/no-go
 
             frame_gonogo = ttk.Frame(window_param)
@@ -952,10 +965,29 @@ class InputManager(ttk.Frame):
             self.entry_response_dur.grid(row=4, column=1, sticky='w')
             self.entry_timeout_dur.grid(row=5, column=1, sticky='w')
 
-        elif session_type == 2:
+        elif session_type == type_freelicking:
             self.entry_session_dur = ttk.Entry(frame_trial, textvariable=self.var_session_dur, **opts_entry10)
             tk.Label(frame_trial, text='Session duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
             self.entry_session_dur.grid(row=0, column=1, sticky='w')
+
+            self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
+            tk.Label(frame_us, text='US0 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            self.entry_us0_dur.grid(row=0, column=1, sticky='w')
+
+        elif session_type == type_run:
+            self.entry_session_dur = ttk.Entry(frame_trial, textvariable=self.var_session_dur, **opts_entry10)
+            tk.Label(frame_trial, text='Session duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            self.entry_session_dur.grid(row=0, column=1, sticky='w')
+
+            self.entry_response_period = ttk.Entry(frame_trial, textvariable=self.var_response_period, **opts_entry10)
+            self.entry_cr0_min = ttk.Entry(frame_trial, textvariable=self.var_cr0_min, **opts_entry10)
+            self.entry_cr0_max = ttk.Entry(frame_trial, textvariable=self.var_cr0_max, **opts_entry10)
+            tk.Label(frame_trial, text='Response period (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+            tk.Label(frame_trial, text='Response min (au): ', anchor='e').grid(row=2, column=0, sticky='e')
+            tk.Label(frame_trial, text='Response max (au): ', anchor='e').grid(row=3, column=0, sticky='e')
+            self.entry_response_period.grid(row=1, column=1, sticky='w')
+            self.entry_cr0_min.grid(row=2, column=1, sticky='w')
+            self.entry_cr0_max.grid(row=3, column=1, sticky='w')
 
             self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
             tk.Label(frame_us, text='US0 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
@@ -976,22 +1008,29 @@ class InputManager(ttk.Frame):
                 self.var_mean_iti.get(), self.var_min_iti.get(), self.var_max_iti.get()
             )
 
-        if session_type == 2:
+        if session_type == type_freelicking:
             # Free licking
-            summary_session = 'Session will last for {} ms (plus pre-/postsession)'.format(
-                self.var_session_dur.get(),
+            summary = (
+                'Session will last for {} ms (plus pre-/postsession)\n'
+                'US0: {}-ms delivery after lick\n'
+                'CS parameters not used\nNo trials (be aware for imaging)'.format(
+                    self.var_session_dur.get(),
+                    self.var_us0_dur.get(),
+                )
             )
-            summary_us = 'US0: {}-ms delivery after lick'.format(
-                self.var_us0_dur.get()
-            )
-            summary_notes = 'CS parameters not used\nNo trials (be aware for imaging)'
-            summary = '{}\n{}\n{}'.format(
-                summary_session,
-                summary_us,
-                summary_notes,
-            )
-
-        if session_type == 0:
+            # summary_session = 'Session will last for {} ms (plus pre-/postsession)'.format(
+            #     self.var_session_dur.get(),
+            # )
+            # summary_us = 'US0: {}-ms delivery after lick'.format(
+            #     self.var_us0_dur.get()
+            # )
+            # summary_notes = 'CS parameters not used\nNo trials (be aware for imaging)'
+            # summary = '{}\n{}\n{}'.format(
+            #     summary_session,
+            #     summary_us,
+            #     summary_notes,
+            # )
+        elif session_type == type_classical:
             # Classical conditioning
             summary_cs0 = 'CS0: {}-ms, {}-Hz cue'.format(
                 self.var_cs0_dur.get(), self.var_cs0_freq.get()
@@ -1017,8 +1056,7 @@ class InputManager(ttk.Frame):
                 summary_csus1, summary_us1,
                 summary_csus2, summary_us2
             )
-
-        elif session_type == 1:
+        elif session_type == type_gonogo:
             # Go/no-go
             summary_gonogo0 = 'Trial start: {}-ms, {}-Hz cue {} ms before go/no-go signal'.format(
                 self.var_trial_signal_dur.get(), self.var_trial_signal_freq.get(), self.var_trial_signal_offset.get()
@@ -1037,8 +1075,20 @@ class InputManager(ttk.Frame):
             summary = '{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
                 summary_iti, summary_gonogo0, summary_gonogo1, summary_gonogo2, summary_gonogo3, summary_gonogo4, summary_gonogo5
             )
+        elif session_type == type_run:
+            # Run
+            summary = (
+                'Session will last for {} ms (plus pre-/postsession)\n'
+                'US: {}-ms delivery\n'
+                'CR: Running [{}, {}) per {} ms\n'
+                'CS parameters not used\nNo trials (be aware for imaging)'.format(
+                    self.var_session_dur.get(),
+                    self.var_us0_dur.get(),
+                    self.var_cr0_min.get(), self.var_cr0_max.get(), self.var_response_period.get(),
+                )
+            )
 
-        if session_type in {0, 1}:
+        if session_type in {type_classical, type_gonogo, type_gonogo_run}:
             summary += '\nUS will be removed after {} ms'.format(self.var_consumption_dur.get())
 
         self.text_params.delete(0.0, 'end')
@@ -1107,17 +1157,17 @@ class InputManager(ttk.Frame):
         self.parameters['cs1_dur'] = self.var_cs1_dur.get()
         self.parameters['cs1_freq'] = self.var_cs1_freq.get()
         self.parameters['cs1_pulse'] = self.var_cs1_pulse.get()
-        self.parameters['cs1_dur'] = self.var_cs1_dur.get()
-        self.parameters['cs1_freq'] = self.var_cs1_freq.get()
-        self.parameters['cs1_pulse'] = self.var_cs1_pulse.get()
+        self.parameters['cr1_min'] = self.var_cr1_min.get()
+        self.parameters['cr1_max'] = self.var_cr1_max.get()
+        self.parameters['cr1_dur'] = self.var_cr1_dur.get()
         self.parameters['us1_dur'] = self.var_us1_dur.get()
         self.parameters['us1_delay'] = self.var_us1_delay.get()
         self.parameters['cs2_dur'] = self.var_cs2_dur.get()
         self.parameters['cs2_freq'] = self.var_cs2_freq.get()
         self.parameters['cs2_pulse'] = self.var_cs2_pulse.get()
-        self.parameters['cs2_dur'] = self.var_cs2_dur.get()
-        self.parameters['cs2_freq'] = self.var_cs2_freq.get()
-        self.parameters['cs2_pulse'] = self.var_cs2_pulse.get()
+        self.parameters['cr2_min'] = self.var_cr2_min.get()
+        self.parameters['cr2_max'] = self.var_cr2_max.get()
+        self.parameters['cr2_dur'] = self.var_cr2_dur.get()
         self.parameters['us2_dur'] = self.var_us2_dur.get()
         self.parameters['us2_delay'] = self.var_us2_delay.get()
         self.parameters['response_period'] = self.var_response_period.get()
@@ -1135,7 +1185,7 @@ class InputManager(ttk.Frame):
         
         # Send parameters and make sure it's processed
         values = self.parameters.values()
-        if self.var_verbose.get(): print('Sending parameters: {}'.format(values))
+        if self.var_verbose.get(): print('Sending parameters: {}'.format(len(values)))
         ser_write(self.ser, code_params + '+'.join(str(s) for s in values))
 
         start_time = time.time()
