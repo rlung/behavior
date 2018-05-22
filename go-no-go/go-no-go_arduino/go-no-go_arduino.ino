@@ -175,6 +175,7 @@ unsigned long cr2_dur;
 unsigned long us2_dur;
 unsigned long us2_delay;
 unsigned long response_period;
+unsigned int response_percent;
 unsigned long consumption_dur;
 unsigned long vac_dur;
 unsigned long trial_signal_offset;
@@ -337,7 +338,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 49;
+  const int paramNum = 50;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -382,17 +383,18 @@ void GetParams() {
   us2_dur = parameters[35];
   us2_delay = parameters[36];
   response_period = parameters[37];
-  consumption_dur = parameters[38];
-  vac_dur = parameters[39];
-  trial_signal_offset = parameters[40];
-  trial_signal_dur = parameters[41];
-  trial_signal_freq = parameters[42];
-  grace_dur = parameters[43];
-  response_dur = parameters[44];
-  timeout_dur = parameters[45];
-  image_all = parameters[46];
-  image_ttl_dur = parameters[47];
-  track_period = parameters[48];
+  response_percent = parameters[38];
+  consumption_dur = parameters[39];
+  vac_dur = parameters[40];
+  trial_signal_offset = parameters[41];
+  trial_signal_dur = parameters[42];
+  trial_signal_freq = parameters[43];
+  grace_dur = parameters[44];
+  response_dur = parameters[45];
+  timeout_dur = parameters[46];
+  image_all = parameters[47];
+  image_ttl_dur = parameters[48];
+  track_period = parameters[49];
 
   if (session_type == 0) {
     trial_num = cs0_num + cs1_num + cs2_num;
