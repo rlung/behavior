@@ -23,7 +23,7 @@ lick).
 
 Example input:
 (need to update with running variables) 0, 60000, 60000, 20, 20, 0, 1, 60000, 40000, 80000, 7000, 13000, 2000, 3000, 0, 50, 3000, 2000, 6000, 0, 50, 3000, 2000, 12000, 0, 50, 3000, 8000, 100, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
-(free_licking_run) 3,5000,5000,60000, 0,0,0, 0,0,0,0, 0,0, 0,0,0,50,5000,0, 50,0, 0,0,0,0,0,0, 0,0, 0,0,0,0,0,0, 0,0, 500,0,0, 0,0,0, 0,0,0, 0,0,50
+(free_licking_run) D 3,5000,5000,60000, 0,0,0, 0,0,0,0, 0,0, 0,0,0,50,5000,0, 50,0, 0,0,0,0,0,0, 0,0, 0,0,0,0,0,0, 0,0, 500,0,0, 0,0,0, 0,0,0, 0,0,50
 unsigned int session_type;
 unsigned long pre_session;
 unsigned long post_session;
@@ -495,7 +495,7 @@ void loop() {
       FreeLicking(ts, lick_count);
       break;
     case code_free_licking_run:
-      FreeLickingRun(ts, cumul_dist);
+      Run(ts, cumul_dist);
       break;
     case code_go_nogo_run:
       GoNogoRun(ts, cumul_dist);

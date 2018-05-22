@@ -1,3 +1,11 @@
+/*
+Go/no-go task with running as response
+
+Response window is divided into bins determined by `response_period`. Certain 
+proportion of bins need to have response met (determined by `trial_cr_min` and 
+`trial_cr_max`) 
+*/
+
 void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
   static unsigned long img_start_ts;      // Timestamp pin was last on
   static unsigned long img_stop_ts;
@@ -16,12 +24,17 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
   static unsigned long cs_start;
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
   static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
+  static unsigned int trial_cr_min;
+  static unsigned int trial_cr_max;
   static boolean in_trial;
   static boolean signaled;
   static boolean stimmed;
   static boolean response_started;
   static boolean responded;
-  static unsigned int response_base;
+  static unsigned long ts_check_response; // Timestamp to periodically check if response is being met
+  static unsigned int response_base;      // Cumulative distance at beginning of response-check window
+  static unsigned int response_sum;       // Number of 'epochs' during response window that response is met
+  static unsigned int response_epoch_num; // Number of 'epochs' within response window
 
 
   // Turn off events
@@ -47,6 +60,8 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       trial_tone_pulse_dur = cs0_pulse_dur;
       trial_sol_pin = pin_sol_0;
       trial_sol_dur = us0_dur;
+      trial_cr_min = cr0_min;
+      trial_cr_max = cr0_max;
     }
     else if (cs_trial_types[trial_ix] == 1) {
       trial_tone_freq = cs1_freq;
@@ -54,6 +69,8 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       trial_tone_pulse_dur = cs1_pulse_dur;
       trial_sol_pin = pin_sol_1;
       trial_sol_dur = us1_dur;
+      trial_cr_min = cr1_min;
+      trial_cr_max = cr1_max;
     }
 
     // Determine timestamps for events
@@ -114,23 +131,43 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       // Start of response window
       if (! response_started) {
         response_started = true;
+        response_sum = 0;
+        response_epoch_num = 0;
+        ts_check_response = ts + response_period;
         response_base = cumul_dist;
       }
 
-      // Track response
-      // if (lick_count - response_licks_base > 0) {
-      //   responded = true;
-      //   ts_us = ts;
-      //   digitalWrite(trial_sol_pin, HIGH);
-      //   behav.SendData(stream, code_us_start, ts, cs_trial_types[trial_ix]);
-      //   behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 1);
-      // }
+      // Periodically check if response is being met
+      // Periodicity of bins is determined by `response_period` and condition 
+      // to be met is deteremined by crX_min and crX_max.
+      if (ts >= ts_check_response) {
+        unsigned long response = cumul_dist - response_base;
+        response_epoch_num++;
+
+        // Check if correct response was made
+        // Increment `response_sum` if response met.
+        if (response >= trial_cr_min && response < trial_cr_max){
+          response_sum++;
+        }
+
+        // Reset baseline for response tracking
+        response_base = cumul_dist;
+        while (ts >= ts_check_response) {
+          ts_check_response = ts_check_response + response_period;
+        }
+      }
     }
-    // if (! responded && lick_count - response_licks_base <= 0 && ts >= ts_response_window_end) {
-    if (! responded && ts >= ts_response_window_end) {
-      responded = true;
-      behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + 0);
+
+    // Determine if response criteria met
+    // Response needs to be met in `response_percent` of bins
+    if (ts >= ts_response_window_end) {
+      if (response_sum > response_percent * response_epoch_num / 100) {
+        responded = true;
+      }
+      behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + responded);
     }
+
+    // End trial
     if (ts >= ts_trial_end) {
       // Determine next trial
       switch (iti_distro) {
