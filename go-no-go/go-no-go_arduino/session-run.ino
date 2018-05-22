@@ -1,4 +1,4 @@
-void FreeLickingRun(unsigned long ts, unsigned int cumul_dist) {
+void Run(unsigned long ts, unsigned int cumul_dist) {
   static unsigned long ts_check_response = response_period;
   static unsigned long ts_us;
   static long response_base = cumul_dist;
@@ -14,8 +14,7 @@ void FreeLickingRun(unsigned long ts, unsigned int cumul_dist) {
       unsigned long response = cumul_dist - response_base;
 
       // Check if correct response was made
-      if (response >= cr0_min && response < cr0_max) {
-        ts_us = ts;
+      if (response >= cr0_min && response < cr0_max){
         digitalWrite(pin_sol_0, HIGH);
         behav.SendData(stream, code_us_start, ts, 0);
       }
