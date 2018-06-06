@@ -23,56 +23,8 @@ lick).
 
 Example input:
 (need to update with running variables) 0, 60000, 60000, 20, 20, 0, 1, 60000, 40000, 80000, 7000, 13000, 2000, 3000, 0, 50, 3000, 2000, 6000, 0, 50, 3000, 2000, 12000, 0, 50, 3000, 8000, 100, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
-(free_licking_run) D 3,5000,5000,60000, 0,0,0, 0,0,0,0, 0,0, 0,0,0,50,5000,0, 50,0, 0,0,0,0,0,0, 0,0, 0,0,0,0,0,0, 0,0, 500,0,0, 0,0,0, 0,0,0, 0,0,50
-unsigned int session_type;
-unsigned long pre_session;
-unsigned long post_session;
-unsigned long session_dur;
-int cs0_num;
-int cs1_num;
-int cs2_num;
-boolean iti_distro;
-unsigned long mean_iti;
-unsigned long min_iti;
-unsigned long max_iti;
-unsigned long pre_stim;
-unsigned long post_stim;
-unsigned long cs0_dur;
-unsigned long cs0_freq;
-unsigned long cs0_pulse_dur;
-unsigned long cr0_min;
-unsigned long cr0_max;
-unsigned long cr0_dur;
-unsigned long us0_dur;
-unsigned long us0_delay;
-unsigned long cs1_dur;
-unsigned long cs1_freq;
-unsigned long cs1_pulse_dur;
-unsigned long cr1_min;
-unsigned long cr1_max;
-unsigned long cr1_dur;
-unsigned long us1_dur;
-unsigned long us1_delay;
-unsigned long cs2_dur;
-unsigned long cs2_freq;
-unsigned long cs2_pulse_dur;
-unsigned long cr2_min;
-unsigned long cr2_max;
-unsigned long cr2_dur;
-unsigned long us2_dur;
-unsigned long us2_delay;
-unsigned long response_period;
-unsigned long consumption_dur;
-unsigned long vac_dur;
-unsigned long trial_signal_offset;
-unsigned long trial_signal_dur;
-unsigned long trial_signal_freq;
-unsigned long grace_dur;
-unsigned long response_dur;
-unsigned long timeout_dur;
-boolean image_all;
-unsigned int image_ttl_dur;
-unsigned int track_period;
+(run) D 3,5000,5000,60000, 0,0,0, 0,0,0,0, 0,0, 0,0,0,50,5000,0, 50,0, 0,0,0,0,0,0, 0,0, 0,0,0,0,0,0, 0,0, 500,0,100,15000, 0,0, 0,0,0, 0,0,0, 0,0,50
+(gonogo_run) D 4,0,0,60000, 5,3,0, 0,8000,20000,12000, 0,8000, 2000,6000,0,50,5000,0, 50,0, 2000,9000,250,0,50,0, 50,0, 0,0,0,0,0,0, 0,0, 500,70,100,15000, 0,0, 0,0,0, 0,2000,0, 0,0,50
 
 */
 
@@ -114,8 +66,9 @@ const int pin_sol_1 = 6;
 const int pin_sol_2 = 7;
 const int pin_signal = 8;
 const int pin_tone = 9;
-const int pin_img_start = 10;
-const int pin_img_stop  = 11;
+const int pin_encourage = 10;
+const int pin_img_start = 11;
+const int pin_img_stop  = 12;
 
 // Output codes
 const int code_end = 0;
@@ -176,6 +129,8 @@ unsigned long us2_dur;
 unsigned long us2_delay;
 unsigned long response_period;
 unsigned int response_percent;
+unsigned long encourage_dur;
+unsigned long encourage_freq;
 unsigned long consumption_dur;
 unsigned long vac_dur;
 unsigned long trial_signal_offset;
@@ -338,7 +293,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 50;
+  const int paramNum = 52;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -384,21 +339,23 @@ void GetParams() {
   us2_delay = parameters[36];
   response_period = parameters[37];
   response_percent = parameters[38];
-  consumption_dur = parameters[39];
-  vac_dur = parameters[40];
-  trial_signal_offset = parameters[41];
-  trial_signal_dur = parameters[42];
-  trial_signal_freq = parameters[43];
-  grace_dur = parameters[44];
-  response_dur = parameters[45];
-  timeout_dur = parameters[46];
-  image_all = parameters[47];
-  image_ttl_dur = parameters[48];
-  track_period = parameters[49];
+  encourage_dur = parameters[39];
+  encourage_freq = parameters[40];
+  consumption_dur = parameters[41];
+  vac_dur = parameters[42];
+  trial_signal_offset = parameters[43];
+  trial_signal_dur = parameters[44];
+  trial_signal_freq = parameters[45];
+  grace_dur = parameters[46];
+  response_dur = parameters[47];
+  timeout_dur = parameters[48];
+  image_all = parameters[49];
+  image_ttl_dur = parameters[50];
+  track_period = parameters[51];
 
   if (session_type == 0) {
     trial_num = cs0_num + cs1_num + cs2_num;
-  } else if (session_type == 1) {
+  } else {
     trial_num = cs0_num + cs1_num;
   }
   trial_dur = pre_stim + post_stim;
@@ -429,7 +386,7 @@ void setup() {
   GetParams();
   Serial.println("Parameters processed");
 
-  if (session_type == code_classical_conditioning || session_type == code_go_nogo) {
+  if (session_type == code_classical_conditioning || session_type == code_go_nogo || session_type == code_go_nogo_run) {
     // First trial
     switch (iti_distro) {
       case 0:
@@ -507,12 +464,14 @@ void loop() {
     // Check for movement
     if (track_change != 0) {
       behav.SendData(stream, code_track, ts, track_change);
-      cumul_dist = cumul_dist + track_change;
+      cumul_dist += track_change;
       track_change = 0;
     }
     
-    // Increment nextTractTS for next track stamp
-    next_track_ts += track_period;
+    // Increment next_track_ts for next track stamp
+    while (ts >= next_track_ts) {
+      next_track_ts += track_period;
+    }
   }
 
   // -- 3. TRACK LICING -- //

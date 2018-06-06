@@ -68,6 +68,9 @@ from slackclient import SlackClient
 import pdb
 
 
+# s = ttk.Style()
+# s.theme_use('alt')
+
 # Setup Slack
 try:
     slack_token = os.environ['SLACK_API_TOKEN']
@@ -221,6 +224,8 @@ class InputManager(ttk.Frame):
         self.var_us2_dur = tk.IntVar()
         self.var_response_period = tk.IntVar()
         self.var_response_percent = tk.IntVar()
+        self.var_encourage_dur = tk.IntVar()
+        self.var_encourage_freq = tk.IntVar()
         self.var_consumption_dur = tk.IntVar()
         self.var_vac_dur = tk.IntVar()
         self.var_trial_signal_offset = tk.IntVar()
@@ -252,11 +257,15 @@ class InputManager(ttk.Frame):
         self.var_counter_cs0 = tk.IntVar()
         self.var_counter_cs1 = tk.IntVar()
         self.var_counter_cs2 = tk.IntVar()
+        self.var_counter_us = tk.IntVar()
+        self.var_counter_us0 = tk.IntVar()
+        self.var_counter_us1 = tk.IntVar()
+        self.var_counter_us2 = tk.IntVar()
         self.var_counter_response = tk.IntVar()
         self.var_counter_cs0_responses = tk.IntVar()
         self.var_counter_cs1_responses = tk.IntVar()
         self.var_counter_cs2_responses = tk.IntVar()
-        self.var_counter_us = tk.IntVar()
+        self.var_start_time = tk.StringVar()
         self.var_next_trial_time = tk.StringVar()
         self.var_next_trial_type = tk.StringVar()
 
@@ -285,8 +294,8 @@ class InputManager(ttk.Frame):
         self.var_cs1_dur.set(2000)
         self.var_cs1_freq.set(12000)
         self.var_cs1_pulse.set(0)
-        self.var_cr1_min.set(0)
-        self.var_cr1_max.set(0)
+        self.var_cr1_min.set(-10)
+        self.var_cr1_max.set(10)
         self.var_cr1_dur.set(0)
         self.var_us1_delay.set(3000)
         self.var_us1_dur.set(50)
@@ -300,6 +309,8 @@ class InputManager(ttk.Frame):
         self.var_us2_dur.set(50)
         self.var_response_period.set(500)
         self.var_response_percent.set(70)
+        self.var_encourage_dur.set(10)
+        self.var_encourage_freq.set(15000)
         self.var_consumption_dur.set(0)
         self.var_vac_dur.set(25)
         self.var_trial_signal_offset.set(0)
@@ -312,11 +323,15 @@ class InputManager(ttk.Frame):
         self.var_image_ttl_dur.set(100)
         self.var_track_period.set(50)
         self.var_serial_status.set('Closed')
+        self.var_start_time.set('--')
         self.var_next_trial_time.set('--')
         self.var_next_trial_type.set('--')
         self.var_counter_cs0.set(0)
         self.var_counter_cs1.set(0)
         self.var_counter_cs2.set(0)
+        self.var_counter_us0.set(0)
+        self.var_counter_us1.set(0)
+        self.var_counter_us2.set(0)
         self.var_counter_lick_onset.set(0)
 
         # Lay out GUI
@@ -368,6 +383,19 @@ class InputManager(ttk.Frame):
         frame_debug.grid(row=2, column=0, sticky='we', **opts_frame1)
         frame_debug.grid_columnconfigure(0, weight=1)
 
+        ### Hardware frame
+        frame_hardware = ttk.LabelFrame(frame_setup_col1, text='Hardware', **opts_labelframe)
+        frame_hardware.grid(row=3, column=0, sticky='we', **opts_frame1)
+
+        frame_sol = ttk.Frame(frame_hardware)
+        frame_sol.grid(row=0, column=0, sticky='we', **opts_frame1)
+        frame_sol.grid_columnconfigure(0, weight=1)  # Fills into frame
+
+        frame_cs = ttk.Frame(frame_hardware)
+        frame_cs.grid(row=0, column=1, sticky='we', **opts_frame1)
+        frame_cs.grid_columnconfigure(0, weight=1)
+
+
         ### Info frame
         frame_info = ttk.Frame(frame_setup_col2)
         frame_info.grid(row=0, column=0, sticky='we', **opts_frame1)
@@ -397,37 +425,25 @@ class InputManager(ttk.Frame):
         ## Monitor frame
         frame_monitor = ttk.Frame(parent)
         frame_monitor.grid(row=2, column=0, **opts_frame0)
-        frame_monitor_col0 = ttk.Frame(frame_monitor)
-        frame_monitor_col1 = ttk.Frame(frame_monitor)
-        frame_monitor_col2 = ttk.Frame(frame_monitor)
-        frame_monitor_col0.grid(row=0, column=0, sticky='we')
-        frame_monitor_col1.grid(row=0, column=1, sticky='we')
-        frame_monitor_col2.grid(row=0, column=2, sticky='we')
-        frame_monitor_col2.grid_columnconfigure(0, weight=1)
-
-        ### Solenoid frame
-        frame_sol = ttk.Frame(frame_monitor_col0)
-        frame_sol.grid(row=0, column=0, sticky='we', **opts_frame1)
-        frame_sol.grid_columnconfigure(0, weight=1)  # Fills into frame
-
-        ### CS frame
-        frame_cs = ttk.Frame(frame_monitor_col1)
-        frame_cs.grid(row=0, column=1, sticky='we', **opts_frame1)
-        frame_cs.grid_columnconfigure(0, weight=1)
+        frame_monitor_counters = ttk.Frame(frame_monitor)
+        frame_monitor_counters.grid(row=1, column=0, columnspan=3, sticky='we')
+        frame_monitor_counters.grid_columnconfigure(0, weight=1)
 
         ### Next trial frame
-        frame_next = ttk.Frame(frame_monitor_col2)
-        frame_next.grid(row=0, column=2, sticky='we', **opts_frame1)
+        frame_next = ttk.Frame(frame_monitor_counters)
+        frame_next.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_next.grid_columnconfigure(0, weight=1)
 
         ### Counter
-        frame_count = ttk.Frame(frame_monitor_col2)
-        frame_count.grid(row=1, column=2, sticky='we', **opts_frame1)
+        frame_count = ttk.Frame(frame_monitor_counters)
+        frame_count.grid(row=0, column=1, sticky='we', **opts_frame1)
         frame_count.grid_columnconfigure(0, weight=1)
-        frame_count_row0 = ttk.Frame(frame_count)
-        frame_count_row1 = ttk.Frame(frame_count)
-        frame_count_row0.grid(row=0, column=0, sticky='we', pady=5)
-        frame_count_row1.grid(row=1, column=0, sticky='we', pady=5)
+        frame_count_lick = ttk.Frame(frame_count)
+        frame_count_cs = ttk.Frame(frame_count)
+        frame_count_us = ttk.Frame(frame_count)
+        frame_count_lick.grid(row=0, column=0, sticky='we', **opts_frame2)
+        frame_count_cs.grid(row=0, column=1, sticky='we', **opts_frame2)
+        frame_count_us.grid(row=0, column=2, sticky='we', **opts_frame2)
 
         # Add GUI components
 
@@ -652,31 +668,45 @@ class InputManager(ttk.Frame):
         self.button_cs2['state'] = 'disabled'
 
         # frame_next
-        ttk.Label(frame_next, text='Next trial time: ').grid(row=0, column=0, sticky='e')
-        ttk.Label(frame_next, text='Next trial type: ').grid(row=1, column=0, sticky='e')
-        ttk.Entry(frame_next, textvariable=self.var_next_trial_time, state='readonly', **opts_entry10).grid(row=0, column=1)
-        ttk.Entry(frame_next, textvariable=self.var_next_trial_type, state='readonly', **opts_entry10).grid(row=1, column=1)
+        ttk.Label(frame_next, text='Start time: ').grid(row=0, column=0, sticky='e')
+        ttk.Label(frame_next, text='Next trial time: ').grid(row=1, column=0, sticky='e')
+        ttk.Label(frame_next, text='Next trial type: ').grid(row=2, column=0, sticky='e')
+        ttk.Entry(frame_next, textvariable=self.var_start_time, state='readonly', **opts_entry10).grid(row=0, column=1)
+        ttk.Entry(frame_next, textvariable=self.var_next_trial_time, state='readonly', **opts_entry10).grid(row=1, column=1)
+        ttk.Entry(frame_next, textvariable=self.var_next_trial_type, state='readonly', **opts_entry10).grid(row=2, column=1)
 
         # frame_count
-        ttk.Label(frame_count_row0, text='Count', anchor='center').grid(row=0, column=1, sticky='we')
-        ttk.Label(frame_count_row0, text='Response', anchor='center').grid(row=0, column=2, sticky='we')
-        ttk.Label(frame_count_row0, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
-        ttk.Label(frame_count_row0, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
-        ttk.Label(frame_count_row0, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
-        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs0, state='readonly', **opts_entry10).grid(row=1, column=1, sticky='e')
-        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs1, state='readonly', **opts_entry10).grid(row=2, column=1, sticky='e')
-        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs2, state='readonly', **opts_entry10).grid(row=3, column=1, sticky='e')
-        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs0_responses, state='readonly', **opts_entry10).grid(row=1, column=2, sticky='e')
-        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs1_responses, state='readonly', **opts_entry10).grid(row=2, column=2, sticky='e')
-        ttk.Entry(frame_count_row0, textvariable=self.var_counter_cs2_responses, state='readonly', **opts_entry10).grid(row=3, column=2, sticky='e')
+        ttk.Label(frame_count_cs, text='Count', anchor='center').grid(row=0, column=1, sticky='we')
+        ttk.Label(frame_count_cs, text='Response', anchor='center').grid(row=0, column=2, sticky='we')
+        ttk.Label(frame_count_cs, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
+        ttk.Label(frame_count_cs, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
+        ttk.Label(frame_count_cs, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
+        ttk.Entry(frame_count_cs, textvariable=self.var_counter_cs0, state='readonly', **opts_entry10).grid(row=1, column=1, sticky='e')
+        ttk.Entry(frame_count_cs, textvariable=self.var_counter_cs1, state='readonly', **opts_entry10).grid(row=2, column=1, sticky='e')
+        ttk.Entry(frame_count_cs, textvariable=self.var_counter_cs2, state='readonly', **opts_entry10).grid(row=3, column=1, sticky='e')
+        ttk.Entry(frame_count_cs, textvariable=self.var_counter_cs0_responses, state='readonly', **opts_entry10).grid(row=1, column=2, sticky='e')
+        ttk.Entry(frame_count_cs, textvariable=self.var_counter_cs1_responses, state='readonly', **opts_entry10).grid(row=2, column=2, sticky='e')
+        ttk.Entry(frame_count_cs, textvariable=self.var_counter_cs2_responses, state='readonly', **opts_entry10).grid(row=3, column=2, sticky='e')
 
-        ttk.Label(frame_count_row1, text='Lick count: ', anchor='e').grid(row=4, column=0, sticky='e')
-        ttk.Entry(frame_count_row1, textvariable=self.var_counter_lick_onset, state='readonly', **opts_entry10).grid(row=4, column=1, sticky='e')
+        ttk.Label(frame_count_us, text='Count', anchor='center').grid(row=0, column=1, sticky='we')
+        ttk.Label(frame_count_us, text='US0: ', anchor='e').grid(row=1, column=0, sticky='e')
+        ttk.Label(frame_count_us, text='US1: ', anchor='e').grid(row=2, column=0, sticky='e')
+        ttk.Label(frame_count_us, text='US2: ', anchor='e').grid(row=3, column=0, sticky='e')
+        ttk.Entry(frame_count_us, textvariable=self.var_counter_us0, state='readonly', **opts_entry10).grid(row=1, column=1, sticky='e')
+        ttk.Entry(frame_count_us, textvariable=self.var_counter_us1, state='readonly', **opts_entry10).grid(row=2, column=1, sticky='e')
+        ttk.Entry(frame_count_us, textvariable=self.var_counter_us2, state='readonly', **opts_entry10).grid(row=3, column=1, sticky='e')
+
+        ttk.Label(frame_count_lick, text='Count: ', anchor='center').grid(row=0, column=1, sticky='we')
+        ttk.Label(frame_count_lick, text='Total licks: ', anchor='e').grid(row=1, column=0, sticky='e')
+        ttk.Entry(frame_count_lick, textvariable=self.var_counter_lick_onset, state='readonly', **opts_entry10).grid(row=1, column=1, sticky='e')
 
         ## Group GUI objects
         self.obj_to_disable_at_open = [
             self.radio_conditioning,
             self.radio_gonogo,
+            self.radio_freelicking,
+            self.radio_run,
+            self.radio_gonogo_run,
             self.entry_pre_session,
             self.entry_post_session,
             self.entry_cs0_num,
@@ -756,8 +786,8 @@ class InputManager(ttk.Frame):
                 self.var_counter_trial_start,
                 self.var_counter_trial_signal,
                 self.var_counter_cs,
-                self.var_counter_response,
                 self.var_counter_us,
+                self.var_counter_response,
             ])
         }
         self.counter_gui = [
@@ -767,6 +797,9 @@ class InputManager(ttk.Frame):
             self.var_counter_cs0_responses,
             self.var_counter_cs1_responses,
             self.var_counter_cs2_responses,
+            self.var_counter_us0,
+            self.var_counter_us1,
+            self.var_counter_us2,
             self.var_counter_lick_onset,
         ]
 
@@ -830,7 +863,7 @@ class InputManager(ttk.Frame):
         frame_trial.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_csus.grid(row=1, column=0, sticky='we', **opts_frame1)
         frame_vac.grid(row=2, column=0, sticky='we', **opts_frame1)
-        frame_update.grid(row=4, column=0, sticky='we', **opts_frame1)
+        frame_update.grid(row=5, column=0, sticky='we', **opts_frame1)
         frame_trial.columnconfigure(0, weight=1)
         frame_csus.columnconfigure(0, weight=1)
         frame_vac.columnconfigure(0, weight=1)
@@ -846,154 +879,133 @@ class InputManager(ttk.Frame):
         frame_cs.grid(row=0, column=0, sticky='we', **opts_frame1)
         frame_us.grid(row=0, column=1, sticky='we', **opts_frame1)
 
-        if session_type in {type_classical, type_gonogo}:
+        if session_type in {type_classical, type_gonogo, type_gonogo_run}:
             # frame_trial
             # UI for trial.
             radio_fixed_iti = ttk.Radiobutton(frame_trial_col0, text='Fixed', variable=self.var_iti_distro, value=0)
             radio_uniform_iti = ttk.Radiobutton(frame_trial_col0, text='Uniform distro', variable=self.var_iti_distro, value=1)
             radio_expo_iti = ttk.Radiobutton(frame_trial_col0, text='Exponential distro', variable=self.var_iti_distro, value=2)
-            tk.Label(frame_trial_col0, text='ITI variability').grid(row=0, column=0, sticky='w')
+            ttk.Label(frame_trial_col0, text='ITI variability').grid(row=0, column=0, sticky='w')
             radio_fixed_iti.grid(row=1, column=0, sticky='w')
             radio_uniform_iti.grid(row=2, column=0, sticky='w')
             radio_expo_iti.grid(row=3, column=0, sticky='w')
 
-            self.entry_mean_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_mean_iti, **opts_entry10)
-            self.entry_min_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_min_iti, **opts_entry10)
-            self.entry_max_iti = ttk.Entry(frame_trial_col1, textvariable=self.var_max_iti, **opts_entry10)
-            self.entry_pre_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_pre_stim, **opts_entry10)
-            self.entry_post_stim = ttk.Entry(frame_trial_col1, textvariable=self.var_post_stim, **opts_entry10)
-            tk.Label(frame_trial_col1, text='Mean ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
-            tk.Label(frame_trial_col1, text='Min ITI (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
-            tk.Label(frame_trial_col1, text='Max ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
-            tk.Label(frame_trial_col1, text='Prestim time (ms): ', anchor='e').grid(row=6, column=0, sticky='e')
-            tk.Label(frame_trial_col1, text='Poststim time (ms): ', anchor='e').grid(row=7, column=0, sticky='e')
-            self.entry_mean_iti.grid(row=3, column=1, sticky='w')
-            self.entry_min_iti.grid(row=4, column=1, sticky='w')
-            self.entry_max_iti.grid(row=5, column=1, sticky='w')
-            self.entry_pre_stim.grid(row=6, column=1, sticky='w')
-            self.entry_post_stim.grid(row=7, column=1, sticky='w')
+            ttk.Label(frame_trial_col1, text='Mean ITI (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
+            ttk.Label(frame_trial_col1, text='Min ITI (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
+            ttk.Label(frame_trial_col1, text='Max ITI (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
+            ttk.Label(frame_trial_col1, text='Prestim time (ms): ', anchor='e').grid(row=6, column=0, sticky='e')
+            ttk.Label(frame_trial_col1, text='Poststim time (ms): ', anchor='e').grid(row=7, column=0, sticky='e')
+            ttk.Entry(frame_trial_col1, textvariable=self.var_mean_iti, **opts_entry10).grid(row=3, column=1, sticky='w')
+            ttk.Entry(frame_trial_col1, textvariable=self.var_min_iti, **opts_entry10).grid(row=4, column=1, sticky='w')
+            ttk.Entry(frame_trial_col1, textvariable=self.var_max_iti, **opts_entry10).grid(row=5, column=1, sticky='w')
+            ttk.Entry(frame_trial_col1, textvariable=self.var_pre_stim, **opts_entry10).grid(row=6, column=1, sticky='w')
+            ttk.Entry(frame_trial_col1, textvariable=self.var_post_stim, **opts_entry10).grid(row=7, column=1, sticky='w')
 
             # frame_csus
             # UI for CS-US
-            self.entry_cs0_dur = ttk.Entry(frame_cs, textvariable=self.var_cs0_dur, **opts_entry10)
-            self.entry_cs0_freq = ttk.Entry(frame_cs, textvariable=self.var_cs0_freq, **opts_entry10)
-            self.entry_cs0_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs0_pulse, **opts_entry10)
-            self.entry_cs1_dur = ttk.Entry(frame_cs, textvariable=self.var_cs1_dur, **opts_entry10)
-            self.entry_cs1_freq = ttk.Entry(frame_cs, textvariable=self.var_cs1_freq, **opts_entry10)
-            self.entry_cs1_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs1_pulse, **opts_entry10)
-            tk.Label(frame_cs, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
-            tk.Label(frame_cs, text='f (s' u'\u207b\u00b9' ')', anchor='center').grid(row=0, column=2, sticky='we')
-            tk.Label(frame_cs, text='pulse (ms)', anchor='center').grid(row=0, column=3, sticky='we')
-            tk.Label(frame_cs, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
-            tk.Label(frame_cs, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
-            self.entry_cs0_dur.grid(row=1, column=1, sticky='w')
-            self.entry_cs0_freq.grid(row=1, column=2, sticky='w')
-            self.entry_cs0_pulse.grid(row=1, column=3, sticky='w')
-            self.entry_cs1_dur.grid(row=2, column=1, sticky='w')
-            self.entry_cs1_freq.grid(row=2, column=2, sticky='w')
-            self.entry_cs1_pulse.grid(row=2, column=3, sticky='w')
+            ttk.Label(frame_cs, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
+            ttk.Label(frame_cs, text='f (s' u'\u207b\u00b9' ')', anchor='center').grid(row=0, column=2, sticky='we')
+            ttk.Label(frame_cs, text='pulse (ms)', anchor='center').grid(row=0, column=3, sticky='we')
+            ttk.Label(frame_cs, text='CS0: ', anchor='e').grid(row=1, column=0, sticky='e')
+            ttk.Label(frame_cs, text='CS1: ', anchor='e').grid(row=2, column=0, sticky='e')
+            ttk.Entry(frame_cs, textvariable=self.var_cs0_dur, **opts_entry10).grid(row=1, column=1, sticky='w')
+            ttk.Entry(frame_cs, textvariable=self.var_cs0_freq, **opts_entry10).grid(row=1, column=2, sticky='w')
+            ttk.Entry(frame_cs, textvariable=self.var_cs0_pulse, **opts_entry10).grid(row=1, column=3, sticky='w')
+            ttk.Entry(frame_cs, textvariable=self.var_cs1_dur, **opts_entry10).grid(row=2, column=1, sticky='w')
+            ttk.Entry(frame_cs, textvariable=self.var_cs1_freq, **opts_entry10).grid(row=2, column=2, sticky='w')
+            ttk.Entry(frame_cs, textvariable=self.var_cs1_pulse, **opts_entry10).grid(row=2, column=3, sticky='w')
 
-            self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
-            self.entry_us1_dur = ttk.Entry(frame_us, textvariable=self.var_us1_dur, **opts_entry10)
-            tk.Label(frame_us, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
-            tk.Label(frame_us, text='US0: ', anchor='e').grid(row=1, column=0, sticky='e')
-            tk.Label(frame_us, text='US1: ', anchor='e').grid(row=2, column=0, sticky='e')
-            self.entry_us0_dur.grid(row=1, column=1, sticky='w')
-            self.entry_us1_dur.grid(row=2, column=1, sticky='w')
+            ttk.Label(frame_us, text='t (ms)', anchor='center').grid(row=0, column=1, sticky='we')
+            ttk.Label(frame_us, text='US0: ', anchor='e').grid(row=1, column=0, sticky='e')
+            ttk.Label(frame_us, text='US1: ', anchor='e').grid(row=2, column=0, sticky='e')
+            ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10).grid(row=1, column=1, sticky='w')
+            ttk.Entry(frame_us, textvariable=self.var_us1_dur, **opts_entry10).grid(row=2, column=1, sticky='w')
 
             # frame_vac
             # UI for vacuum.
-            self.entry_consumption_dur = ttk.Entry(frame_vac, textvariable=self.var_consumption_dur, **opts_entry10)
-            self.entry_vac_dur = ttk.Entry(frame_vac, textvariable=self.var_vac_dur, **opts_entry10)
-            tk.Label(frame_vac, text='Consumption time limit (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-            tk.Label(frame_vac, text='Vacuum duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-            self.entry_consumption_dur.grid(row=0, column=1, sticky='w')
-            self.entry_vac_dur.grid(row=1, column=1, sticky='w')
+            ttk.Label(frame_vac, text='Consumption time limit (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            ttk.Label(frame_vac, text='Vacuum duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+            ttk.Entry(frame_vac, textvariable=self.var_consumption_dur, **opts_entry10).grid(row=0, column=1, sticky='w')
+            ttk.Entry(frame_vac, textvariable=self.var_vac_dur, **opts_entry10).grid(row=1, column=1, sticky='w')
+
+            if session_type == type_classical:
+                frame_csus2 = ttk.Frame(window_param)
+                frame_csus2.grid(row=3, column=0, sticky='e', **opts_frame1)
+
+                ttk.Label(frame_cs, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
+                ttk.Entry(frame_cs, textvariable=self.var_cs2_dur, **opts_entry10).grid(row=3, column=1, sticky='w')
+                ttk.Entry(frame_cs, textvariable=self.var_cs2_freq, **opts_entry10).grid(row=3, column=2, sticky='w')
+                ttk.Entry(frame_cs, textvariable=self.var_cs2_pulse, **opts_entry10).grid(row=3, column=3, sticky='w')
+
+                ttk.Label(frame_us, text='US2: ', anchor='e').grid(row=3, column=0, sticky='e')
+                ttk.Label(frame_us, text='Delay (ms)', anchor='e').grid(row=0, column=2, sticky='e')
+                ttk.Entry(frame_us, textvariable=self.var_us2_dur, **opts_entry10).grid(row=3, column=1, sticky='w')
+                ttk.Entry(frame_us, textvariable=self.var_us0_delay, **opts_entry10).grid(row=1, column=2, sticky='w')
+                ttk.Entry(frame_us, textvariable=self.var_us1_delay, **opts_entry10).grid(row=2, column=2, sticky='w')
+                ttk.Entry(frame_us, textvariable=self.var_us2_delay, **opts_entry10).grid(row=3, column=2, sticky='w')
+                
+            elif session_type in {type_gonogo, type_gonogo_run}:
+                frame_gonogo = ttk.Frame(window_param)
+                frame_gonogo.grid(row=4, column=0, sticky='e', **opts_frame1)
+
+                ### frame_gonogo
+                ### UI for trial start (signal)
+                ttk.Label(frame_gonogo, text='Trial signal offset (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+                ttk.Label(frame_gonogo, text='Trial signal duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+                ttk.Label(frame_gonogo, text='Trial signal frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=2, column=0, sticky='e')
+                ttk.Label(frame_gonogo, text='Grace period (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
+                ttk.Label(frame_gonogo, text='Response window (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
+                ttk.Label(frame_gonogo, text='Timeout duration (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
+                ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_offset, **opts_entry10).grid(row=0, column=1, sticky='w')
+                ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_dur, **opts_entry10).grid(row=1, column=1, sticky='w')
+                ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_freq, **opts_entry10).grid(row=2, column=1, sticky='w')
+                ttk.Entry(frame_gonogo, textvariable=self.var_grace_dur, **opts_entry10).grid(row=3, column=1, sticky='w')
+                ttk.Entry(frame_gonogo, textvariable=self.var_response_dur, **opts_entry10).grid(row=4, column=1, sticky='w')
+                ttk.Entry(frame_gonogo, textvariable=self.var_timeout_dur, **opts_entry10).grid(row=5, column=1, sticky='w')
+
+                if session_type == type_gonogo_run:
+                    frame_cr = ttk.Frame(window_param)
+                    frame_cr.grid(row=3, column=0, sticky='we', **opts_frame1)
+
+                    ttk.Label(frame_cr, text='Min', anchor='center').grid(row=0, column=1, sticky='we')
+                    ttk.Label(frame_cr, text='Max', anchor='center').grid(row=0, column=2, sticky='we')
+                    ttk.Label(frame_cr, text='CR0: ', anchor='e').grid(row=1, column=0, sticky='e')
+                    ttk.Label(frame_cr, text='CR1: ', anchor='e').grid(row=2, column=0, sticky='e')
+                    ttk.Entry(frame_cr, textvariable=self.var_cr0_min, **opts_entry10).grid(row=1, column=1, sticky='w')
+                    ttk.Entry(frame_cr, textvariable=self.var_cr0_max, **opts_entry10).grid(row=1, column=2, sticky='w')
+                    ttk.Entry(frame_cr, textvariable=self.var_cr1_min, **opts_entry10).grid(row=2, column=1, sticky='w')
+                    ttk.Entry(frame_cr, textvariable=self.var_cr1_max, **opts_entry10).grid(row=2, column=2, sticky='w')
+
+                    ttk.Label(frame_cr, text='Check period (ms): ', anchor='e').grid(row=1, column=3, sticky='e')
+                    ttk.Label(frame_cr, text='Response percent: ', anchor='e').grid(row=2, column=3, sticky='e')
+                    ttk.Entry(frame_cr, textvariable=self.var_response_period, **opts_entry10).grid(row=1, column=4, sticky='w')
+                    ttk.Entry(frame_cr, textvariable=self.var_response_percent, **opts_entry10).grid(row=2, column=4, sticky='w')
+
+        elif session_type == type_freelicking:
+            ttk.Label(frame_trial, text='Session duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            ttk.Entry(frame_trial, textvariable=self.var_session_dur, **opts_entry10).grid(row=0, column=1, sticky='w')
+
+            ttk.Label(frame_us, text='US0 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10).grid(row=0, column=1, sticky='w')
+
+        elif session_type == type_run:
+            ttk.Label(frame_trial, text='Session duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            ttk.Entry(frame_trial, textvariable=self.var_session_dur, **opts_entry10).grid(row=0, column=1, sticky='w')
+
+            ttk.Label(frame_trial, text='Response period (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
+            ttk.Label(frame_trial, text='Response min (au): ', anchor='e').grid(row=2, column=0, sticky='e')
+            ttk.Label(frame_trial, text='Response max (au): ', anchor='e').grid(row=3, column=0, sticky='e')
+            ttk.Entry(frame_trial, textvariable=self.var_response_period, **opts_entry10).grid(row=1, column=1, sticky='w')
+            ttk.Entry(frame_trial, textvariable=self.var_cr0_min, **opts_entry10).grid(row=2, column=1, sticky='w')
+            ttk.Entry(frame_trial, textvariable=self.var_cr0_max, **opts_entry10).grid(row=3, column=1, sticky='w')
+
+            ttk.Label(frame_us, text='US0 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
+            ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10).grid(row=0, column=1, sticky='w')
 
         # frame_update
         # UI for 'Update' button
         button_update = ttk.Button(frame_update, text='Update', command=lambda: [self.update_param_preview(), window_param.destroy()], **opts_button)
         button_update.grid(row=0, column=0, **opts_button_grid)
-
-        if session_type == type_classical:
-            # Classical conditioning
-
-            frame_csus2 = ttk.Frame(window_param)
-            frame_csus2.grid(row=3, column=0, sticky='e', **opts_frame1)
-            
-            self.entry_cs2_dur = ttk.Entry(frame_cs, textvariable=self.var_cs2_dur, **opts_entry10)
-            self.entry_cs2_freq = ttk.Entry(frame_cs, textvariable=self.var_cs2_freq, **opts_entry10)
-            self.entry_cs2_pulse = ttk.Entry(frame_cs, textvariable=self.var_cs2_pulse, **opts_entry10)
-            tk.Label(frame_cs, text='CS2: ', anchor='e').grid(row=3, column=0, sticky='e')
-            self.entry_cs2_dur.grid(row=3, column=1, sticky='w')
-            self.entry_cs2_freq.grid(row=3, column=2, sticky='w')
-            self.entry_cs2_pulse.grid(row=3, column=3, sticky='w')
-
-            self.entry_us2_dur = ttk.Entry(frame_us, textvariable=self.var_us2_dur, **opts_entry10)
-            self.entry_us0_delay = ttk.Entry(frame_us, textvariable=self.var_us0_delay, **opts_entry10)
-            self.entry_us1_delay = ttk.Entry(frame_us, textvariable=self.var_us1_delay, **opts_entry10)
-            self.entry_us2_delay = ttk.Entry(frame_us, textvariable=self.var_us2_delay, **opts_entry10)
-            tk.Label(frame_us, text='US2: ', anchor='e').grid(row=3, column=0, sticky='e')
-            tk.Label(frame_us, text='Delay (ms)', anchor='e').grid(row=0, column=2, sticky='e')
-            self.entry_us2_dur.grid(row=3, column=1, sticky='w')
-            self.entry_us0_delay.grid(row=1, column=2, sticky='w')
-            self.entry_us1_delay.grid(row=2, column=2, sticky='w')
-            self.entry_us2_delay.grid(row=3, column=2, sticky='w')
-            
-        elif session_type == type_gonogo:
-            # Go/no-go
-
-            frame_gonogo = ttk.Frame(window_param)
-            frame_gonogo.grid(row=3, column=0, sticky='e', **opts_frame1)
-
-            ### frame_gonogo
-            ### UI for trial start (signal)
-            self.entry_trial_signal_offset = ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_offset, **opts_entry10)
-            self.entry_trial_signal_dur = ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_dur, **opts_entry10)
-            self.entry_trial_signal_freq = ttk.Entry(frame_gonogo, textvariable=self.var_trial_signal_freq, **opts_entry10)
-            self.entry_grace_dur = ttk.Entry(frame_gonogo, textvariable=self.var_grace_dur, **opts_entry10)
-            self.entry_response_dur = ttk.Entry(frame_gonogo, textvariable=self.var_response_dur, **opts_entry10)
-            self.entry_timeout_dur = ttk.Entry(frame_gonogo, textvariable=self.var_timeout_dur, **opts_entry10)
-            tk.Label(frame_gonogo, text='Trial signal offset (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-            tk.Label(frame_gonogo, text='Trial signal duration (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-            tk.Label(frame_gonogo, text='Trial signal frequency (s' u'\u207b\u00b9' '): ', anchor='e').grid(row=2, column=0, sticky='e')
-            tk.Label(frame_gonogo, text='Grace period (ms): ', anchor='e').grid(row=3, column=0, sticky='e')
-            tk.Label(frame_gonogo, text='Response window (ms): ', anchor='e').grid(row=4, column=0, sticky='e')
-            tk.Label(frame_gonogo, text='Timeout duration (ms): ', anchor='e').grid(row=5, column=0, sticky='e')
-            self.entry_trial_signal_offset.grid(row=0, column=1, sticky='w')
-            self.entry_trial_signal_dur.grid(row=1, column=1, sticky='w')
-            self.entry_trial_signal_freq.grid(row=2, column=1, sticky='w')
-            self.entry_grace_dur.grid(row=3, column=1, sticky='w')
-            self.entry_response_dur.grid(row=4, column=1, sticky='w')
-            self.entry_timeout_dur.grid(row=5, column=1, sticky='w')
-
-        elif session_type == type_freelicking:
-            self.entry_session_dur = ttk.Entry(frame_trial, textvariable=self.var_session_dur, **opts_entry10)
-            tk.Label(frame_trial, text='Session duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-            self.entry_session_dur.grid(row=0, column=1, sticky='w')
-
-            self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
-            tk.Label(frame_us, text='US0 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-            self.entry_us0_dur.grid(row=0, column=1, sticky='w')
-
-        elif session_type == type_run:
-            self.entry_session_dur = ttk.Entry(frame_trial, textvariable=self.var_session_dur, **opts_entry10)
-            tk.Label(frame_trial, text='Session duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-            self.entry_session_dur.grid(row=0, column=1, sticky='w')
-
-            self.entry_response_period = ttk.Entry(frame_trial, textvariable=self.var_response_period, **opts_entry10)
-            self.entry_cr0_min = ttk.Entry(frame_trial, textvariable=self.var_cr0_min, **opts_entry10)
-            self.entry_cr0_max = ttk.Entry(frame_trial, textvariable=self.var_cr0_max, **opts_entry10)
-            tk.Label(frame_trial, text='Response period (ms): ', anchor='e').grid(row=1, column=0, sticky='e')
-            tk.Label(frame_trial, text='Response min (au): ', anchor='e').grid(row=2, column=0, sticky='e')
-            tk.Label(frame_trial, text='Response max (au): ', anchor='e').grid(row=3, column=0, sticky='e')
-            self.entry_response_period.grid(row=1, column=1, sticky='w')
-            self.entry_cr0_min.grid(row=2, column=1, sticky='w')
-            self.entry_cr0_max.grid(row=3, column=1, sticky='w')
-
-            self.entry_us0_dur = ttk.Entry(frame_us, textvariable=self.var_us0_dur, **opts_entry10)
-            tk.Label(frame_us, text='US0 duration (ms): ', anchor='e').grid(row=0, column=0, sticky='e')
-            self.entry_us0_dur.grid(row=0, column=1, sticky='w')
 
     def update_param_preview(self):
         session_type = self.var_session_type.get()
@@ -1011,11 +1023,11 @@ class InputManager(ttk.Frame):
             )
 
         if session_type == type_freelicking:
-            # Free licking
             summary = (
                 'Session will last for {} ms (plus pre-/postsession)\n'
                 'US0: {}-ms delivery after lick\n'
-                'CS parameters not used\nNo trials (be aware for imaging)'.format(
+                'CS parameters not used\nNo trials (be aware for imaging)\n'
+                .format(
                     self.var_session_dur.get(),
                     self.var_us0_dur.get(),
                 )
@@ -1033,7 +1045,6 @@ class InputManager(ttk.Frame):
             #     summary_notes,
             # )
         elif session_type == type_classical:
-            # Classical conditioning
             summary_cs0 = 'CS0: {}-ms, {}-Hz cue'.format(
                 self.var_cs0_dur.get(), self.var_cs0_freq.get()
             )
@@ -1059,7 +1070,6 @@ class InputManager(ttk.Frame):
                 summary_csus2, summary_us2
             )
         elif session_type == type_gonogo:
-            # Go/no-go
             summary_gonogo0 = 'Trial start: {}-ms, {}-Hz cue {} ms before go/no-go signal'.format(
                 self.var_trial_signal_dur.get(), self.var_trial_signal_freq.get(), self.var_trial_signal_offset.get()
             )
@@ -1070,7 +1080,7 @@ class InputManager(ttk.Frame):
             summary_gonogo3 = 'No-go (CS1): {}-ms, {}-Hz cue'.format(
                 self.var_cs1_dur.get(), self.var_cs1_freq.get()
             )
-            summary_gonogo4 = 'Go (US1): {} ms'.format(self.var_us1_dur.get())
+            summary_gonogo4 = 'No-go (US1): {} ms'.format(self.var_us1_dur.get())
             summary_gonogo5 = '{}-ms grace, {}-ms response window, {}-ms timeout'.format(
                 self.var_grace_dur.get(), self.var_response_dur.get(), self.var_timeout_dur.get()
             )
@@ -1078,20 +1088,43 @@ class InputManager(ttk.Frame):
                 summary_iti, summary_gonogo0, summary_gonogo1, summary_gonogo2, summary_gonogo3, summary_gonogo4, summary_gonogo5
             )
         elif session_type == type_run:
-            # Run
             summary = (
                 'Session will last for {} ms (plus pre-/postsession)\n'
                 'US: {}-ms delivery\n'
                 'CR: Running [{}, {}) per {} ms\n'
-                'CS parameters not used\nNo trials (be aware for imaging)'.format(
+                'CS parameters not used\nNo trials (be aware for imaging)\n'
+                .format(
                     self.var_session_dur.get(),
                     self.var_us0_dur.get(),
                     self.var_cr0_min.get(), self.var_cr0_max.get(), self.var_response_period.get(),
                 )
             )
+        elif session_type == type_gonogo_run:
+            summary = (
+                '{}\n'
+                'Trial start: {}-ms, {}-Hz cue {} ms before go/no-go signal\n'
+                'Go (CS0): {}-ms, {}-Hz cue\n'
+                'Go (CR0): run within ({}, {}] per {} ms\n'
+                'Go (US0): {} ms\n'
+                'No-go (CS1): {}-ms, {}-Hz cue\n'
+                'No-go (CR1): run within ({}, {}] per {} ms\n'
+                'No-go (US1): {} ms\n'
+                '{}-ms grace, {}-ms response window, {}-ms timeout\n'
+                .format(
+                    summary_iti,
+                    self.var_trial_signal_dur.get(), self.var_trial_signal_freq.get(), self.var_trial_signal_offset.get(),
+                    self.var_cs0_dur.get(), self.var_cs0_freq.get(),
+                    self.var_cr0_min.get(), self.var_cr0_max.get(), self.var_response_period.get(),
+                    self.var_us0_dur.get(),
+                    self.var_cs1_dur.get(), self.var_cs1_freq.get(),
+                    self.var_cr1_min.get(), self.var_cr1_max.get(), self.var_response_period.get(),
+                    self.var_us1_dur.get(),
+                    self.var_grace_dur.get(), self.var_response_dur.get(), self.var_timeout_dur.get()
+                )
+            )
 
         if session_type in {type_classical, type_gonogo, type_gonogo_run}:
-            summary += '\nUS will be removed after {} ms'.format(self.var_consumption_dur.get())
+            summary += 'US will be removed after {} ms'.format(self.var_consumption_dur.get())
 
         self.text_params.delete(0.0, 'end')
         self.text_params.insert(0.0, summary)
@@ -1174,6 +1207,8 @@ class InputManager(ttk.Frame):
         self.parameters['us2_delay'] = self.var_us2_delay.get()
         self.parameters['response_period'] = self.var_response_period.get()
         self.parameters['response_percent'] = self.var_response_percent.get()
+        self.parameters['encourage_dur'] = self.var_encourage_dur.get()
+        self.parameters['encourage_freq'] = self.var_encourage_freq.get()
         self.parameters['consumption_dur'] = self.var_consumption_dur.get()
         self.parameters['vac_dur'] = self.var_vac_dur.get()
         self.parameters['trial_signal_offset'] = self.var_trial_signal_offset.get()
@@ -1345,6 +1380,7 @@ class InputManager(ttk.Frame):
         ser_write(self.ser, code_start)
         thread_scan.start()
         self.start_time = datetime.now()
+        self.var_start_time.set(str(self.start_time.time()))
         print('Session started at {}'.format(self.start_time))
         self.grp_exp.attrs['start_time'] = str(self.start_time)
 
@@ -1411,6 +1447,13 @@ class InputManager(ttk.Frame):
                     self.var_counter_cs1.set(self.var_counter_cs1.get() + 1)
                 elif data == 2:
                     self.var_counter_cs2.set(self.var_counter_cs2.get() + 1)
+            elif code == code_us_start:
+                if data == 0:
+                    self.var_counter_us0.set(self.var_counter_us0.get() + 1)
+                elif data == 1:
+                    self.var_counter_us1.set(self.var_counter_us1.get() + 1)
+                elif data == 2:
+                    self.var_counter_us2.set(self.var_counter_us2.get() + 1)
             elif code == code_response:
                 if data == 1:
                     self.var_counter_cs0_responses.set(self.var_counter_cs0_responses.get() + 1)

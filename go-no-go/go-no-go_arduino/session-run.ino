@@ -1,11 +1,13 @@
 void Run(unsigned long ts, unsigned int cumul_dist) {
   static unsigned long ts_check_response = response_period;
   static unsigned long ts_us;
+  static unsigned long ts_encourage;
   static long response_base = cumul_dist;
 
 
   // Turn off events
   if (ts >= ts_us + us0_dur) digitalWrite(pin_sol_0, LOW);
+  if (ts >= ts_encourage + encourage_dur) digitalWrite(pin_encourage, LOW);
 
   // Check if in session
   if (ts >= pre_session && ts < pre_session + session_dur) {
@@ -15,7 +17,9 @@ void Run(unsigned long ts, unsigned int cumul_dist) {
 
       // Check if correct response was made
       if (response >= cr0_min && response < cr0_max){
+        ts_us = ts;
         digitalWrite(pin_sol_0, HIGH);
+        tone(pin_encourage, encourage_freq, encourage_dur);
         behav.SendData(stream, code_us_start, ts, 0);
       }
 
