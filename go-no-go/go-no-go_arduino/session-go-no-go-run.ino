@@ -23,14 +23,17 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
   static unsigned int trial_tone_pulse_dur;
   static unsigned long cs_start;
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
-  static unsigned int trial_sol_dur;      // Defines solenoid duration for trial
+  static unsigned long trial_us_dur;      // Defines solenoid duration for trial
+  static unsigned long trial_us_delay;
   static unsigned int trial_cr_min;
   static unsigned int trial_cr_max;
   static boolean in_trial;
   static boolean signaled;
   static boolean stimmed;
   static boolean response_started;
+  static boolean response_ended;
   static boolean responded;
+  static boolean rewarded;
   static unsigned long ts_check_response; // Timestamp to periodically check if response is being met
   static unsigned int response_base;      // Cumulative distance at beginning of response-check window
   static unsigned int response_sum;       // Number of 'epochs' during response window that response is met
@@ -41,7 +44,7 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
   if (ts >= img_start_ts + IMGPINDUR) digitalWrite(pin_img_start, LOW);
   if (ts >= img_stop_ts + IMGPINDUR) digitalWrite(pin_img_stop, LOW);
   if (ts >= ts_trial_signal + trial_signal_dur) digitalWrite(pin_signal, LOW);
-  if (ts >= ts_us + trial_sol_dur) digitalWrite(trial_sol_pin, LOW);
+  if (ts >= ts_us + trial_us_dur) digitalWrite(trial_sol_pin, LOW);
   if (consumption_dur && ts_us) {
     // Only check if time limit set for consumption & delivery has happened
     if (ts >= ts_us + consumption_dur) digitalWrite(pin_vac, HIGH);
@@ -59,7 +62,8 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       trial_tone_dur = cs0_dur;
       trial_tone_pulse_dur = cs0_pulse_dur;
       trial_sol_pin = pin_sol_0;
-      trial_sol_dur = us0_dur;
+      trial_us_dur = us0_dur;
+      trial_us_delay = us0_delay;
       trial_cr_min = cr0_min;
       trial_cr_max = cr0_max;
     }
@@ -68,7 +72,8 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       trial_tone_dur = cs1_dur;
       trial_tone_pulse_dur = cs1_pulse_dur;
       trial_sol_pin = pin_sol_1;
-      trial_sol_dur = us1_dur;
+      trial_us_dur = us1_dur;
+      trial_us_delay = us1_delay;
       trial_cr_min = cr1_min;
       trial_cr_max = cr1_max;
     }
@@ -139,32 +144,44 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
 
       // Periodically check if response is being met
       // Periodicity of bins is determined by `response_period` and condition 
-      // to be met is deteremined by crX_min and crX_max.
+      // to be met is deteremined by trial_cr_min and trial_cr_max.
       if (ts >= ts_check_response) {
         unsigned long response = cumul_dist - response_base;
         response_epoch_num++;
 
         // Check if correct response was made
         // Increment `response_sum` if response met.
-        if (response >= trial_cr_min && response < trial_cr_max){
+        if (response >= trial_cr_min && response < trial_cr_max) {
           response_sum++;
         }
 
         // Reset baseline for response tracking
         response_base = cumul_dist;
         while (ts >= ts_check_response) {
-          ts_check_response = ts_check_response + response_period;
+          ts_check_response += response_period;
         }
       }
     }
 
     // Determine if response criteria met
     // Response needs to be met in `response_percent` of bins
-    if (ts >= ts_response_window_end) {
+    if (! response_ended && ts >= ts_response_window_end) {
+      response_ended = true;
+      Serial.print("trial bins: ");
+      Serial.print(response_sum);
+      Serial.print(" out of ");
+      Serial.println(response_epoch_num);
       if (response_sum > response_percent * response_epoch_num / 100) {
         responded = true;
+        ts_us = ts_response_window_end + trial_us_delay;
       }
       behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + responded);
+    }
+
+    if (responded && ! rewarded && ts >= ts_us) {
+      rewarded = true;
+      digitalWrite(trial_sol_pin, HIGH);
+      behav.SendData(stream, code_us_start, ts, cs_trial_types[trial_ix]);
     }
 
     // End trial
@@ -188,7 +205,9 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       signaled = false;
       stimmed = false;
       response_started = false;
+      response_ended = false;
       responded = false;
+      rewarded = false;
       trial_ix++;
       if (! image_all) digitalWrite(pin_img_stop, HIGH);
     }
