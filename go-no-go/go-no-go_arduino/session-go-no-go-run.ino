@@ -6,7 +6,7 @@ proportion of bins need to have response met (determined by `trial_cr_min` and
 `trial_cr_max`) 
 */
 
-void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
+void GoNogoRun(unsigned long ts, long cumul_dist) {
   static unsigned long img_start_ts;      // Timestamp pin was last on
   static unsigned long img_stop_ts;
 
@@ -25,8 +25,8 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
   static unsigned int trial_sol_pin;      // Defines solenoid to trigger for trial
   static unsigned long trial_us_dur;      // Defines solenoid duration for trial
   static unsigned long trial_us_delay;
-  static unsigned int trial_cr_min;
-  static unsigned int trial_cr_max;
+  static long trial_cr_min;
+  static long trial_cr_max;
   static boolean in_trial;
   static boolean signaled;
   static boolean stimmed;
@@ -35,7 +35,7 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
   static boolean responded;
   static boolean rewarded;
   static unsigned long ts_check_response; // Timestamp to periodically check if response is being met
-  static unsigned int response_base;      // Cumulative distance at beginning of response-check window
+  static long response_base;              // Cumulative distance at beginning of response-check window
   static unsigned int response_sum;       // Number of 'epochs' during response window that response is met
   static unsigned int response_epoch_num; // Number of 'epochs' within response window
 
@@ -130,9 +130,8 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       }
     }
 
-    // -Deliver US (if responded)-
     // Track response
-    if (ts >= ts_response_window_start && ts < ts_response_window_end) {
+    if (! response_ended && ts >= ts_response_window_start) {
       // Start of response window
       if (! response_started) {
         response_started = true;
@@ -146,8 +145,15 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
       // Periodicity of bins is determined by `response_period` and condition 
       // to be met is deteremined by trial_cr_min and trial_cr_max.
       if (ts >= ts_check_response) {
-        unsigned long response = cumul_dist - response_base;
+        long response = cumul_dist - response_base;
         response_epoch_num++;
+        Serial.print("d ");
+        Serial.print(response);
+        Serial.print(", ");
+        Serial.print(trial_cr_min);
+        Serial.print(", ");
+        Serial.println(trial_cr_max);
+
 
         // Check if correct response was made
         // Increment `response_sum` if response met.
@@ -161,21 +167,22 @@ void GoNogoRun(unsigned long ts, unsigned int cumul_dist) {
           ts_check_response += response_period;
         }
       }
-    }
 
-    // Determine if response criteria met
-    // Response needs to be met in `response_percent` of bins
-    if (! response_ended && ts >= ts_response_window_end) {
-      response_ended = true;
-      Serial.print("trial bins: ");
-      Serial.print(response_sum);
-      Serial.print(" out of ");
-      Serial.println(response_epoch_num);
-      if (response_sum > response_percent * response_epoch_num / 100) {
-        responded = true;
-        ts_us = ts_response_window_end + trial_us_delay;
+      // Determine if response criteria met
+      // Response needs to be met in `response_percent` of bins
+      if (ts >= ts_response_window_end) {
+        response_ended = true;
+        Serial.print("trial bins: ");
+        Serial.print(response_sum);
+        Serial.print(" out of ");
+        Serial.println(response_epoch_num);
+        if (response_sum >= response_percent * response_epoch_num / 100) {
+          responded = true;
+          tone(pin_encourage, encourage_freq, encourage_dur);
+          ts_us = ts_response_window_end + trial_us_delay;
+        }
+        behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + responded);
       }
-      behav.SendData(stream, code_response, ts, cs_trial_types[trial_ix] * 2 + responded);
     }
 
     if (responded && ! rewarded && ts >= ts_us) {
