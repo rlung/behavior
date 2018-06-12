@@ -421,7 +421,7 @@ void setup() {
 
   if (image_all) digitalWrite(pin_img_start, HIGH);
   Serial.println("Session started\n");
-  if (session_type == code_classical_conditioning || session_type == code_go_nogo) {
+  if (session_type == code_classical_conditioning || session_type == code_go_nogo || session_type == code_go_nogo_run) {
     behav.SendData(stream, code_next_trial, next_trial_ts, cs_trial_types[0]);
   }
 }
