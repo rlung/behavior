@@ -3,56 +3,50 @@
 '''
 Pupil-wheel
 
-Creates GUI to control behavioral devices for recording video (pupil) and rotary encoder 
-(wheel). Script interfaces with Arduino microcontroller and cameras.
+Creates GUI to control behavioral devices for recording video (pupil) and rotary
+encoder (wheel). Script interfaces with Arduino microcontroller and cameras.
+
+Outline of flow
+1. Set parameters for experiment.
+2. Establish serial connection with Arduino. Paremeters will be uploaded to
+Arduino when this happens.
+3. Set meta data for experiment and saved file location.
+4. Start experiment!
+
 '''
 
 import sys
-is_py2 = sys.version[0] == '2'
+sys.path.insert(0, '../essentials/arduino-py/')
+sys.path.insert(0, '../essentials/')
 
-import matplotlib
-matplotlib.use('TKAgg')
-if is_py2:
-    import Tkinter as tk
-    import ttk
-    import tkFont
-    import tkMessageBox
-    import tkFileDialog
-    from ScrolledText import ScrolledText
-    from Queue import Queue
-    import collections
-else:
-    import tkinter as tk
-    import tkinter.ttk as ttk
-    import tkinter.font as tkFont
-    import tkinter.messagebox as tkMessageBox
-    import tkinter.filedialog as tkFileDialog
-    from tkinter.scrolledtext import ScrolledText
-    from queue import Queue
+import tkinter as tk
+import tkinter.ttk as ttk
+import tkinter.font as tkFont
+import tkinter.messagebox as tkMessageBox
+import tkinter.filedialog as tkFileDialog
+from tkinter.scrolledtext import ScrolledText
 from PIL import ImageTk
 import serial
 import serial.tools.list_ports
 import threading
+from queue import Queue
 import time
 from datetime import datetime
-from datetime import timedelta
 import os
-import sys
 import h5py
-import numpy as np
+import matplotlib
 from matplotlib.figure import Figure
-import matplotlib.animation as animation
-from matplotlib.colors import LinearSegmentedColormap
-from matplotlib import style
-# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-import seaborn as sns
 import arduino
+import live_data_view
 import pdb
+
+matplotlib.use('TKAgg')
 
 
 # Header to print with Arduino outputs
 arduino_head = '  [a]: '
 
+# Formatting
 entry_width = 10
 ew = 10  # Width of Entry UI
 px = 15
@@ -64,24 +58,25 @@ py1 = 2
 code_end = 0
 code_wheel = 7
 
-code_last_param = 271828
-
-# Events to record
-events = ['wheel',]
-
 # Arduino code to save-file variable
-arduino2save = {code_wheel: 'wheel'}
+arduino_events = {
+    code_wheel: 'wheel'
+}
+
+# Events to count
+# counter_ev =[]
 
 # Path to this file
 source_path = os.path.dirname(sys.argv[0])
 
-class InputManager(tk.Frame):
+class Main(tk.Frame):
 
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
 
         self.parent = parent
         parent.columnconfigure(0, weight=1)
+        # parent.rowconfigure(1, weight=1)
 
         self.var_port = tk.StringVar()
         self.var_verbose = tk.BooleanVar()
@@ -89,9 +84,10 @@ class InputManager(tk.Frame):
         self.var_stop = tk.BooleanVar()
 
         # Counters
+        # IMPORTANT: need to keep `counter_vars` in same order as `arduino_events`
         self.var_counter_wheel = tk.IntVar()
         counter_vars = [self.var_counter_wheel]
-        self.counter = {ev: var_count for ev, var_count in zip(events, counter_vars)}
+        self.counter = {ev: var_count for ev, var_count in zip(arduino_events.values(), counter_vars)}
 
         # Lay out GUI
 
@@ -103,6 +99,11 @@ class InputManager(tk.Frame):
         frame_setup_col0.grid(row=0, column=0, sticky='we')
         frame_setup_col1.grid(row=0, column=1, sticky='we')
         frame_setup_col2.grid(row=0, column=2, sticky='we')
+
+        frame_monitor = tk.Frame(parent)
+        frame_monitor.grid(row=1, column=0)
+        # frame_monitor.rowconfigure(0, weight=1)
+        # frame_monitor.columnconfigure(1, weight=1)
 
         # Session frame
         frame_params = tk.Frame(frame_setup_col0)
@@ -116,7 +117,7 @@ class InputManager(tk.Frame):
  
         # Arduino frame
         frame_arduino = ttk.LabelFrame(frame_setup_col1, text='Arduino')
-        frame_arduino.grid(row=1, column=0, padx=px, pady=py, sticky='we')
+        frame_arduino.grid(row=0, column=0, padx=px, pady=py, sticky='we')
         frame_arduino1 = tk.Frame(frame_arduino)
         frame_arduino2 = tk.Frame(frame_arduino)
         frame_arduino1.grid(row=0, column=0, sticky='we', padx=px, pady=py)
@@ -140,6 +141,14 @@ class InputManager(tk.Frame):
         frame_start.grid(row=3, column=0, sticky='we', padx=px, pady=py)
         frame_start.grid_columnconfigure(0, weight=1)
         frame_start.grid_columnconfigure(1, weight=1)
+
+        # Monitor frame
+        frame_counter = tk.Frame(frame_monitor)
+        frame_live = tk.Frame(frame_monitor)
+        frame_counter.grid(row=0, column=0, padx=px, pady=py, sticky='we')
+        frame_live.grid(row=1, column=0, padx=px, pady=py, sticky='wens')
+        # frame_live.rowconfigure(0, weight=1)
+        # frame_live.columnconfigure(1, weight=1)
 
         # Add GUI components
 
@@ -192,6 +201,16 @@ class InputManager(tk.Frame):
         self.button_stop = ttk.Button(frame_start, text='Stop', command=lambda: self.var_stop.set(True))
         self.button_start.grid(row=2, column=0, sticky='we')
         self.button_stop.grid(row=2, column=1, sticky='we')
+
+        ## Counter frame
+        tk.Label(frame_counter, text='Under construction').grid()
+
+        ## Live frame
+        data_types = {
+            arduino_events[code_wheel]: 'line'
+        }
+        # tk.Label(frame_live, text='Also under construction').grid()
+        self.live_view = live_data_view.LiveDataView(frame_live, x_history=30000, data_types=data_types, ylim=(-25, 50), xlabel='Time (ms)')
         
         ###### GUI OBJECTS ORGANIZED BY TIME ACTIVE ######
         # List of components to disable at open
@@ -215,13 +234,13 @@ class InputManager(tk.Frame):
         ]
 
         # Default values
-        self.entry_session_dur.insert(0, 10000)
+        self.entry_session_dur.insert(0, 60000)
         self.entry_track_period.insert(0, 50)
         self.button_start['state'] = 'disabled'
         self.button_stop['state'] = 'disabled'
 
         ###### SESSION VARIABLES ######
-        self.parameters = collections.OrderedDict() if is_py2 else {}
+        self.parameters = {}
         self.ser = serial.Serial(timeout=1, baudrate=9600)
         self.q_serial = Queue()
 
@@ -248,14 +267,14 @@ class InputManager(tk.Frame):
         Enable and disable components based on events to prevent bad stuff.
         '''
 
-        if option == 'opened':
+        if option == 'uploaded':
             # Enable start objects
             for obj in self.obj_to_enable_at_open:
                 obj['state'] = 'normal'
             for obj in self.obj_to_disable_at_open:
                 obj['state'] = 'disabled'
 
-        elif option == 'close':
+        elif option == 'reset':
             for obj in self.obj_to_disable_at_open:
                 obj['state'] = 'normal'
             for obj in self.obj_to_enable_at_open:
@@ -277,24 +296,22 @@ class InputManager(tk.Frame):
         self.entry_serial_state['state'] = 'normal'
         self.entry_serial_state.delete(0, 'end')
         if self.ser.isOpen():
-            self.entry_serial_state.insert(0, '{} is open'.format(self.ser.port))
-            self.gui_util('opened')
+            self.entry_serial_state.insert(0, 'Uploaded to {}'.format(self.ser.port))
+            self.gui_util('uploaded')
         else:
-            self.entry_serial_state.insert(0, 'Serial is closed')
-            self.gui_util('close')
+            self.entry_serial_state.insert(0, 'Waiting for parameters')
+            self.gui_util('reset')
         self.entry_serial_state['state'] = 'readonly'
 
     def close_serial(self):
         self.ser.close()
         self.update_serial()
-        # if self.var_verbose.get(): print('Serial closed')
 
     def arduino_setup(self):
         # *** Gather parameters to send ***
         self.parameters = {
             'session_dur': int(self.entry_session_dur.get()),
             'track_period': int(self.entry_track_period.get()),
-            'last_param': code_last_param
         }
 
         # Create new window
@@ -314,7 +331,7 @@ class InputManager(tk.Frame):
             except IOError:
                 tkMessageBox.showerror('File error', 'Could not create file to save data.')
                 self.gui_util('stop')
-                self.gui_util('opened')
+                self.gui_util('uploaded')
                 return
         else:
             # Default file name
@@ -351,14 +368,14 @@ class InputManager(tk.Frame):
         # Reset counters
         for counter in self.counter.values(): counter.set(0)
 
-        # Store session parameters into behavior group
-        for key, value in self.parameters.items():
-            self.grp_behav.attrs[key] = value
-
         # Clear Queues
         for q in [self.q_serial]:
             with q.mutex:
                 q.queue.clear()
+
+        # Store session parameters into behavior group
+        for key, value in self.parameters.items():
+            self.grp_behav.attrs[key] = value
 
         # Create thread to scan serial
         suppress = [
@@ -372,7 +389,7 @@ class InputManager(tk.Frame):
 
         # Start session
         self.ser.flushInput()                                   # Remove data from serial input
-        ser_write(self.ser, code_start)
+        self.ser.write(code_start.encode())
         thread_scan.start()
         self.start_time = datetime.now()
         print('Session start {}'.format(self.start_time))
@@ -392,7 +409,7 @@ class InputManager(tk.Frame):
         # End on 'Stop' button (by user)
         if self.var_stop.get():
             self.var_stop.set(False)
-            ser_write(self.ser, '0')
+            self.ser.write('0'.encode())
             print('User triggered stop, sending signal to Arduino...')
 
         # Watch incoming queue
@@ -400,6 +417,7 @@ class InputManager(tk.Frame):
         # Empty queue before leaving. Otherwise, a backlog will grow.
         while not self.q_serial.empty():
             code, ts, data = self.q_serial.get()
+            print(code, ts, data)
 
             # End session
             if code == code_end:
@@ -409,8 +427,12 @@ class InputManager(tk.Frame):
                 return
 
             # Record data
-            self.grp_behav[arduino2save[code]][:, self.counter[arduino2save[code]].get()] = [ts, data]
-            self.counter[arduino2save[code]].set(self.counter[arduino2save[code]].get() + 1)
+            self.grp_behav[arduino_events[code]][:, self.counter[arduino_events[code]].get()] = [ts, data]
+            self.counter[arduino_events[code]].set(self.counter[arduino_events[code]].get() + 1)
+
+            # Update live view
+            if code == code_wheel:
+                self.live_view.update_view([ts, data], name=arduino_events[code_wheel])
 
         self.parent.after(refresh_rate, self.update_session)
 
@@ -427,31 +449,20 @@ class InputManager(tk.Frame):
         # Finalize data
         print('Finalizing behavioral data')
         self.grp_behav.attrs['end_time'] = end_time
-        self.grp_behav.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
         self.grp_behav.attrs['arduino_end'] = arduino_end
-        for ev in events:
+        for ev in arduino_events.values():
             self.grp_behav[ev].resize((2, self.counter[ev].get()))
+        self.grp_exp.attrs['notes'] = self.scrolled_notes.get(1.0, 'end')
 
         # Close HDF5 file object
         print('Closing {}'.format(self.data_file.filename))
         self.data_file.close()
         
         # Clear self.parameters
-        self.parameters = collections.OrderedDict() if is_py2 else {}
+        self.parameters = {}
 
         print('All done!')
 
-def ser_write(ser, code):
-    if not is_py2:
-        if type(code) is not bytes: code = code.encode()
-    ser.write(code)
-
-
-def ser_readline(ser):
-    if is_py2:
-        return ser.readline()
-    else:
-        return ser.readline().decode()
 
 def scan_serial(q_serial, ser, print_arduino=False, suppress=[], code_end=0):
     '''Check serial for data
@@ -462,7 +473,7 @@ def scan_serial(q_serial, ser, print_arduino=False, suppress=[], code_end=0):
 
     if print_arduino: print('  Scanning Arduino outputs.')
     while 1:
-        input_arduino = ser_readline(ser)
+        input_arduino = ser.readline().decode()
         if not input_arduino: continue
 
         try:
@@ -484,7 +495,7 @@ def main():
     # GUI
     root = tk.Tk()
     root.wm_title('Wheel')
-    InputManager(root)
+    Main(root)
     root.grid()
     root.mainloop()
 
