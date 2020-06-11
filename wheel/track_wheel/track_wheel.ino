@@ -1,15 +1,15 @@
 /*
 Odor presentation
 
-Use with Python GUI "odor-presentation.py". Handles hardware for control of
+Use with Python GUI "XXX.py". Handles hardware for control of
 behavioral session.
 
 Parameters for session are received via serial connection and Python GUI. 
 Data from hardware is routed directly back via serial connection to Python 
-GUI for recording and calculations.
+GUI as "triplet" for recording and calculations.
 
 Example input:
-D0,0,5,5000,30000,0,100,50
+D10000,50,271828
 
 */
 
@@ -18,11 +18,13 @@ D0,0,5,5000,30000,0,100,50
 #define CODEPARAMSEND 271828
 #define CODEPARAMS 68
 #define CODESTART 69
+#define CODEPARAMERR 70
 #define DELIM ","         // Delimiter used for serial outputs
 
 // Pins
 const int pin_track_a = 2;
 const int pin_track_b = 3;
+const int pin_cam = 4;
 
 // Output codes
 const int code_end = 0;
@@ -52,6 +54,8 @@ void EndSession(unsigned long ts) {
   Serial.print(DELIM);
   Serial.println("0");
 
+  digitalWrite(pin_cam, LOW);
+
   while (1);
 }
 
@@ -60,7 +64,7 @@ void EndSession(unsigned long ts) {
 int GetParams() {
   const int param_num = 3;
   unsigned long parameters[param_num];
-  int last_num;
+  unsigned long last_num;
 
   for (int p = 0; p < param_num; p++) {
     parameters[p] = Serial.parseInt();
@@ -110,6 +114,7 @@ void setup() {
   // Set pins
   pinMode(pin_track_a, INPUT);
   pinMode(pin_track_b, INPUT);
+  pinMode(pin_cam, OUTPUT);
 
   // Wait for parameters
   int exit_code;
@@ -121,16 +126,18 @@ void setup() {
       break;
     }
     else {
-      Serial.print("Error parsing parameters. Exit code ");
-      Serial.println(exit_code);
+      Serial.println(CODEPARAMERR);
+      Serial.println("Error parsing parameters");
     }
   }
+  Serial.println(0);
   Serial.println("Paremeters processed");
 
   // Wait for start signal
   Serial.println("Waiting for start signal ('E')");
   LookForSignal(2, 0);
   Serial.println("Session started");
+  digitalWrite(pin_cam, HIGH);
 
   // Set interrupt
   // Do not set earlier as TrackMovement() will be called before session starts.
@@ -166,22 +173,13 @@ void loop() {
 
   // -- 2. TRACK MOVEMENT -- //
   if (ts >= ts_next_track) {
-    // if (track_change != 0) {
-    //   Serial.print(code_move);
-    //   Serial.print(DELIM);
-    //   Serial.print(ts);
-    //   Serial.print(DELIM);
-    //   Serial.println(track_change);
-    // }
-    long r = random(100);
-    if (r < 10) {
-      long t = random(1,11);
-      Serial.print(code_move);
-      Serial.print(DELIM);
-      Serial.print(ts);
-      Serial.print(DELIM);
-      Serial.println(t);
-    }
+     if (track_change != 0) {
+       Serial.print(code_move);
+       Serial.print(DELIM);
+       Serial.print(ts);
+       Serial.print(DELIM);
+       Serial.println(track_change);
+     }
     track_change = 0;
     
     // Increment ts_next_track for next track stamp
