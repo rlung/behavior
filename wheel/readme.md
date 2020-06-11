@@ -1,5 +1,8 @@
 # Wheel
 
+## In progress
+- Restructure arduino and serial. Serial now belongs to `self.arduino`
+
 ## To-do
 
 - What happens when connecting to wrong serial port?
@@ -13,4 +16,6 @@
 
 ## Notes
 
-Nom nom
+
+## Firefly S IO control
+http://softwareservices.flir.com/FFY-U3-16S2M/latest/Model/public/DigitalIOControl.html
