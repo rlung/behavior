@@ -6,50 +6,40 @@ Manage Arduino connection
 Paremeters are sent to Arduino when serial connection is opened. Message 
 contains parameters with prefix and specific delimiter set by code.
 
-Will look for attributes from calling tkinter frame:
-- ser
-- var_verbose
+Will look for attributes from parent:
 - var_print_arduino
 - parameters
 '''
 
-import sys
-is_py2 = sys.version[0] == '2'
 
-if is_py2:
-    import Tkinter as tk
-    import ttk
-    import tkMessageBox
-else:
-    import tkinter as tk
-    import tkinter.ttk as ttk
-    import tkinter.messagebox as tkMessageBox    
+import argparse
+import tkinter as tk
+import tkinter.ttk as ttk
+import tkinter.messagebox as tkMessageBox
+import pathlib
+import sys
 import os
 import time
 from PIL import ImageTk
 import serial
 import serial.tools.list_ports
 
+import pdb
 
-class Arduino(tk.Toplevel):
-    def __init__(self, parent, main):
+code_last_param = 271828
+
+class Arduino(tk.Frame):
+    def __init__(self, parent, main_window=None, verbose=False, params={'a': 1, 'b': 2}):
+        super().__init__()   # https://stackoverflow.com/questions/576169/understanding-python-super-with-init-methods
         self.parent = parent
-        self.parent.title('Connect to Arduino')
-        self.main = main
-        try:
-            self.verbose = main.var_verbose.get()
-        except AttributeError:
-            self.verbose = True
+        self.main_window = main_window if main_window else self.parent
+
         try: self.print_arduino = self.var_print_arduino.get()
         except AttributeError: self.print_arduino = '  [a]: '
-        try: self.parameters = self.main.parameters
-        except AttributeError: self.parameters = {'a': 1, 'b': 2, 'c': 3}
+        self.verbose = verbose
+        self.parameters = params
 
-        try:
-            self.ser = self.main.ser
-        except AttributeError:
-            self.main.ser = serial.Serial(timeout=1, baudrate=9600)
-            self.ser = self.main.ser
+        self.ser = serial.Serial(timeout=1, write_timeout=3, baudrate=9600)
 
         self.var_port = tk.StringVar()
 
@@ -68,51 +58,51 @@ class Arduino(tk.Toplevel):
         self.option_ports = ttk.OptionMenu(frame_arduino1, self.var_port, [])
         self.button_update_ports = ttk.Button(frame_arduino1, text='u', command=self.update_ports)
         self.entry_serial_status = ttk.Entry(frame_arduino1)
-        self.button_open_port = ttk.Button(frame_arduino2, text='Open', command=self.open_serial)
-        self.button_close_port = ttk.Button(frame_arduino2, text='Close', command=self.close_serial)
+        self.button_settings = ttk.Button(frame_arduino2, text='Settings', command=self.settings)
+        self.button_open_port = ttk.Button(frame_arduino2, text='Upload', command=self.open_serial)
+        self.button_close_port = ttk.Button(frame_arduino2, text='Reset', command=self.close_serial)
         tk.Label(frame_arduino1, text='Port: ').grid(row=0, column=0, sticky='e')
         tk.Label(frame_arduino1, text='State: ').grid(row=1, column=0, sticky='e')
         self.option_ports.grid(row=0, column=1, sticky='we', padx=5)
         self.button_update_ports.grid(row=0, column=2, pady=py)
         self.entry_serial_status.grid(row=1, column=1, columnspan=2, sticky='we', padx=px1)
-        self.button_open_port.grid(row=0, column=0, pady=py, sticky='we')
-        self.button_close_port.grid(row=0, column=1, pady=py, sticky='we')
+        self.button_settings.grid(row=0, column=0, columnspan=2, pady=py, sticky='we')
+        self.button_open_port.grid(row=1, column=0, pady=py, sticky='we')
+        self.button_close_port.grid(row=1, column=1, pady=py, sticky='we')
 
-        update_icon_file = 'refresh.png'
+        update_icon_file = os.path.join(pathlib.Path(__file__).parent.absolute(), 'refresh.png')
         if os.path.isfile(update_icon_file):
             icon_refresh = ImageTk.PhotoImage(file=update_icon_file)
             self.button_update_ports.config(image=icon_refresh)
             self.button_update_ports.image = icon_refresh
 
         self.button_close_port['state'] = 'disabled'
-        self.entry_serial_status.insert(0, 'Closed')
+        self.entry_serial_status.insert(0, 'Waiting for parameters')
         self.entry_serial_status['state'] = 'readonly'
         self.update_ports()
 
-        if self.ser.isOpen():
-            self.var_port.set(self.ser.port)
-            self.gui_util('opened')
+        # if self.ser.isOpen():
+        #     self.var_port.set(self.ser.port)
+        #     self.gui_util('uploaded')
 
     def gui_util(self, opt):
-        if opt == 'open':
+        def relabel(label, txt):
+            label['state'] = 'normal'
+            label.delete(0, 'end')
+            label.insert(0, txt)
+            label['state'] = 'readonly'
+        if opt == 'upload':
             self.button_open_port['state'] = 'disabled'
-            self.entry_serial_status['state'] = 'normal'
-            self.entry_serial_status.delete(0, 'end')
-            self.entry_serial_status.insert(0, 'Opening...')
-            self.entry_serial_status['state'] = 'readonly'
-        elif opt == 'opened':
+            relabel(self.entry_serial_status, 'Uploading...')
+        elif opt == 'uploaded':
             self.button_open_port['state'] = 'disabled'
             self.button_close_port['state'] = 'normal'
-            self.entry_serial_status['state'] = 'normal'
-            self.entry_serial_status.delete(0, 'end')
-            self.entry_serial_status.insert(0, 'Opened')
-            self.entry_serial_status['state'] = 'readonly'
-        elif opt == 'close':
+            relabel(self.entry_serial_status, 'Uploaded')
+        elif opt == 'resetting':
             self.button_close_port['state'] = 'disabled'
-            self.entry_serial_status['state'] = 'normal'
-            self.entry_serial_status.delete(0, 'end')
-            self.entry_serial_status.insert(0, 'Closed')
-            self.entry_serial_status['state'] = 'readonly'
+            relabel(self.entry_serial_status, 'Resetting connection...')
+        elif opt == 'reset':
+            relabel(self.entry_serial_status, 'Waiting for parameters')
             self.update_ports()
         else:
             print('Unknown utility option')
@@ -139,6 +129,12 @@ class Arduino(tk.Toplevel):
             self.var_port.set('No ports found')
             self.button_open_port['state'] = 'disabled'
 
+    def settings(self):
+        '''Sets serial settings'''
+
+        win_settings = tk.Toplevel(self.main_window)
+        tk.Label(win_settings, text='Under construction').grid()
+
     def open_serial(self, delay=3, timeout=10, code_params='D', delim='+'):
         ''' Open serial connection to Arduino
         Executes when 'Open' is pressed
@@ -147,7 +143,7 @@ class Arduino(tk.Toplevel):
         opened with prefix `code_params` and delimited by `delim`
         '''
 
-        self.gui_util('open')
+        self.gui_util('upload')
 
         # Open serial
         self.ser.port = self.var_port.get()
@@ -157,7 +153,7 @@ class Arduino(tk.Toplevel):
             # Error during serial.open()
             err_msg = err.args[0]
             tkMessageBox.showerror('Serial error', err_msg)
-            print('Serial error: ' + err_msg)
+            print(f'Serial error: {err_msg}')
             self.close_serial()
             return
         else:
@@ -168,67 +164,62 @@ class Arduino(tk.Toplevel):
         # Handle opening message from serial
         if self.print_arduino:
             while self.ser.in_waiting:
-                sys.stdout.write(self.print_arduino + ser_readline(self.ser))
+                sys.stdout.write(self.print_arduino + self.ser.readline().decode())
         else:
             self.ser.flushInput()
 
-        # Send parameters and make sure it's processed
-        values = self.parameters.values()
-        if self.verbose: print('Sending parameters: {}'.format(values))
-        ser_write(self.ser, code_params + delim.join(str(s) for s in values))
-        print(code_params + delim.join(str(s) for s in values))
+        # Send parameters to Arduino
+        values = list(self.parameters.values())
+        values.append(code_last_param)
+        ser_msg = code_params + delim.join(str(s) for s in values)
+        if self.verbose: print('Sending parameters as `{}`'.format(ser_msg))
+        try:
+            self.ser.write(ser_msg.encode())
+        except serial.serialutil.SerialTimeoutException:
+            # Write timeout
+            print('Error uploading parameters: write timeout')
+            self.close_serial()
+            return
 
+        # Ensure parameters processed
         start_time = time.time()
         while 1:
+            if time.time() >= start_time + timeout:
+                print('Error uploading parameters: start signal not found')
+                self.close_serial()
+                return
             if self.ser.in_waiting:
+                upload_code = self.ser.readline().decode().rstrip()
                 if self.print_arduino:
                     # Print incoming data
                     while self.ser.in_waiting:
-                        sys.stdout.write(self.print_arduino + ser_readline(self.ser))
-                print('Parameters uploaded to Arduino')
-                print('Ready to start')
-                self.gui_util('opened')
-                return
-            elif time.time() >= start_time + timeout:
-                print('Error sending parameters to Arduino')
-                print('Uploading timed out. Start signal not found.')
-                self.close_serial()
-                self.gui_util('close')
-                return
+                        sys.stdout.write(self.print_arduino + self.ser.readline().decode())
+                if upload_code != '0':
+                    print(f'Error uploading parameters: exit code {upload_code}')
+                    self.close_serial()
+                    return
+                else:
+                    print('Parameters uploaded to Arduino')
+                    print('Ready to start')
+                    self.gui_util('uploaded')
+                    return
     
     def close_serial(self):
         ''' Close serial connection to Arduino '''
+        print('Closing serial connection')
+        self.gui_util('resetting')
         self.ser.close()
-        self.gui_util('close')
-        print('Connection to Arduino closed.')
+        self.gui_util('reset')
+        print('Connection to Arduino closed')
 
-class ArduinoTest(tk.Frame):
-    def __init__(self, parent):
-        self.parent = parent
-
-        self.button = tk.Button(self.parent, text='Start', command=self.test)
-        self.button.pack()
-
-    def test(self):
-        test_window = tk.Toplevel(self.parent)
-        Arduino(test_window, self)
-
-def ser_write(ser, code):
-    '''Manage writing in Python 2 vs 3'''
-    if (not is_py2) and (type(code) is not bytes):
-        code = code.encode()
-    ser.write(code)
-
-def ser_readline(ser):
-    '''Manage reading in Python 2 vs 3'''
-    if is_py2:
-        return ser.readline()
-    else:
-        return ser.readline().decode()
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--verbose', action='store_true')
+    args = parser.parse_args()
+
     root = tk.Tk()
-    Arduino(root, tk.Frame)
+    Arduino(root, verbose=args.verbose)
     root.mainloop()
 
 
