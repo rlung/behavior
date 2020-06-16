@@ -70,7 +70,7 @@ class Arduino(tk.Frame):
         self.button_open_port.grid(row=1, column=0, pady=py, sticky='we')
         self.button_close_port.grid(row=1, column=1, pady=py, sticky='we')
 
-        update_icon_file = os.path.join(pathlib.Path(__file__).parent.absolute(), 'refresh.png')
+        update_icon_file = os.path.join(pathlib.Path(__file__).parent.absolute(), 'graphics/refresh.png')
         if os.path.isfile(update_icon_file):
             icon_refresh = ImageTk.PhotoImage(file=update_icon_file)
             self.button_update_ports.config(image=icon_refresh)
@@ -170,6 +170,8 @@ class Arduino(tk.Frame):
 
         # Send parameters to Arduino
         values = list(self.parameters.values())
+        if type(values[0]) == tk.IntVar:
+            values = [x.get() for x in values]
         values.append(code_last_param)
         ser_msg = code_params + delim.join(str(s) for s in values)
         if self.verbose: print('Sending parameters as `{}`'.format(ser_msg))
@@ -213,13 +215,37 @@ class Arduino(tk.Frame):
         print('Connection to Arduino closed')
 
 
+class Sample(ttk.Frame):
+    def __init__(self, parent, verbose=False):
+        self.parent = parent
+
+        self.var_param1 = tk.IntVar()
+        self.var_param2 = tk.IntVar()
+        self.params = {'a': self.var_param1, 'b': self.var_param2}
+
+        self.var_param1.set(10000)
+        self.var_param2.set(50)
+
+        frame_params = ttk.Frame(self.parent)
+        frame_arduino = ttk.Frame(self.parent)
+        frame_params.grid(row=0, column=0)
+        frame_arduino.grid(row=0, column=1)
+
+        entry_param1 = ttk.Entry(frame_params, textvariable=self.var_param1)
+        entry_param2 = ttk.Entry(frame_params, textvariable=self.var_param2)
+        entry_param1.grid(row=0, column=0)
+        entry_param2.grid(row=1, column=0)
+
+        Arduino(frame_arduino, verbose=verbose, params=self.params)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
 
     root = tk.Tk()
-    Arduino(root, verbose=args.verbose)
+    Sample(root, verbose=args.verbose)
     root.mainloop()
 
 
