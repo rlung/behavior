@@ -23,7 +23,6 @@ D10000,50,271828
 // Pins
 const int pin_track_a = 2;
 const int pin_track_b = 3;
-const int pin_cam = 4;
 
 // Output codes
 const int code_end = 0;
