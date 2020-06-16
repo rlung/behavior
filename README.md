@@ -1,2 +1,3 @@
-# behavior
-Behavioral paradigms
+# Behavioral paradigms
+
+Utilizes Python and Arduino
