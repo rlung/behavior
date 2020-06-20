@@ -431,7 +431,7 @@ class InputManager(ttk.Frame):
         self.entry_cs0_num.grid(row=2, column=1, sticky='w')
         self.entry_cs1_num.grid(row=3, column=1, sticky='w')
         self.entry_cs2_num.grid(row=4, column=1, sticky='w')
-
+        
 
         ### frame_trial_params
         ### UI for session parameters.
