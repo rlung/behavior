@@ -21,13 +21,9 @@ data has `data` encoded as the CS type. Response is coded with CS type and lick
 or not (CS is second bit, lick is first bit, eg, 3 is CS 1, lick; 2 is CS 1 no 
 lick).
 
-Example inputs:
-0+3000+3000+3+1 + 0+60000+17000+360000+5000+10000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
-0+3000+3000+3+1 + 0+45000+3000+120000+1000+1000 + 500+1000+100+500+500+5000+100+500 + 500+100+0+2000+2000+8000 + 0+100+50
+Example input:
+0, 60000, 60000, 20, 20, 0, 1, 60000, 40000, 80000, 7000, 13000, 2000, 3000, 0, 50, 3000, 2000, 6000, 0, 50, 3000, 2000, 12000, 0, 50, 3000, 8000, 100, 2000, 1000, 0, 2000, 2000, 8000, 0, 100, 50
 
-
-TODO
-switch bw classical conditioning and go no go
 */
 
 
@@ -37,9 +33,23 @@ switch bw classical conditioning and go no go
 #define LICK_THRESHOLD 511      // Threshold to classify lick
 #define IMGPINDUR 100           // Length of imaging signal pulse
 #define CODEEND 48
-
-#define STARTCODE 69
-
+#define CODEVACON 49
+#define CODEVACOFF 50
+#define CODEVACTRIGGER 51
+#define CODESOL0ON 52
+#define CODESOL0OFF 53
+#define CODESOL0TRIGGER 54
+#define CODESOL1ON 55
+#define CODESOL1OFF 56
+#define CODESOL1TRIGGER 57
+#define CODESOL2ON 58
+#define CODESOL2OFF 59
+#define CODESOL2TRIGGER 60
+#define CODECS0 61
+#define CODECS1 62
+#define CODECS2 63
+#define CODEPARAMS 68
+#define CODESTART 69
 #define DELIM ","         // Delimiter used for serial communication
 #define DEBUG 1
 
@@ -51,8 +61,7 @@ const int pin_lick = 3;
 const int pin_vac = 4;
 const int pin_sol_0 = 5;
 const int pin_sol_1 = 6;
-const int pin_vac = 4;
-
+const int pin_sol_2 = 7;
 const int pin_signal = 8;
 const int pin_tone = 9;
 const int pin_img_start = 10;
@@ -82,7 +91,7 @@ unsigned long post_session;
 unsigned long session_dur;
 int cs0_num;
 int cs1_num;
-
+int cs2_num;
 boolean iti_distro;
 unsigned long mean_iti;
 unsigned long min_iti;
@@ -112,10 +121,6 @@ unsigned long trial_signal_freq;
 unsigned long grace_dur;
 unsigned long response_dur;
 unsigned long timeout_dur;
-unsigned long consumption_dur;
-unsigned long us0_vac_dur;
-unsigned long us1_vac_dur;
-
 boolean image_all;
 unsigned int image_ttl_dur;
 unsigned int track_period;
@@ -270,7 +275,7 @@ void LookForSignal(int waiting_for, unsigned long ts) {
 
 void GetParams() {
   // Retrieve parameters from serial
-  const int paramNum = 31;
+  const int paramNum = 39;
   unsigned long parameters[paramNum];
 
   for (int p = 0; p < paramNum; p++) {
@@ -280,56 +285,47 @@ void GetParams() {
   session_type = parameters[0];
   pre_session = parameters[1];
   post_session = parameters[2];
+  session_dur = parameters[3];
+  cs0_num = parameters[4];
+  cs1_num = parameters[5];
+  cs2_num = parameters[6];
+  iti_distro = parameters[7];
+  mean_iti = parameters[8];
+  min_iti = parameters[9];
+  max_iti = parameters[10];
+  pre_stim = parameters[11];
+  post_stim = parameters[12];
+  cs0_dur = parameters[13];
+  cs0_freq = parameters[14];
+  cs0_pulse_dur = parameters[15];
+  us0_dur = parameters[16];
+  us0_delay = parameters[17];
+  cs1_dur = parameters[18];
+  cs1_freq = parameters[19];
+  cs1_pulse_dur = parameters[20];
+  us1_dur = parameters[21];
+  us1_delay = parameters[22];
+  cs2_dur = parameters[23];
+  cs2_freq = parameters[24];
+  cs2_pulse_dur = parameters[25];
+  us2_dur = parameters[26];
+  us2_delay = parameters[27];
+  consumption_dur = parameters[28];
+  vac_dur = parameters[29];
+  trial_signal_offset = parameters[30];
+  trial_signal_dur = parameters[31];
+  trial_signal_freq = parameters[32];
+  grace_dur = parameters[33];
+  response_dur = parameters[34];
+  timeout_dur = parameters[35];
+  image_all = parameters[36];
+  image_ttl_dur = parameters[37];
+  track_period = parameters[38];
 
-  cs0_num = parameters[3];
-  cs1_num = parameters[4];
-
-  iti_distro = parameters[5];
-  mean_iti = parameters[6];
-  min_iti = parameters[7];
-  max_iti = parameters[8];
-  pre_stim = parameters[9];
-  post_stim = parameters[10];
-
-  cs0_dur = parameters[11];
-  cs0_freq = parameters[12];
-  us0_delay = parameters[13];
-  us0_dur = parameters[14];
-  cs1_dur = parameters[15];
-  cs1_freq = parameters[16];
-  us1_delay = parameters[17];
-  us1_dur = parameters[18];
-
-  trial_signal_offset = parameters[19];
-  trial_signal_dur = parameters[20];
-  trial_signal_freq = parameters[21];
-  grace_dur = parameters[22];
-  response_dur = parameters[23];
-  timeout_dur = parameters[24];
-  consumption_dur = parameters[25];
-  us0_vac_dur = parameters[26];
-  us1_vac_dur = parameters[27];
-
-  image_all = parameters[28];
-  image_ttl_dur = parameters[29];
-  track_period = parameters[30];
-
-  trial_num = cs0_num + cs1_num;
-  trial_dur = pre_stim + post_stim;
-}
-
-
-void WaitForStart() {
-  byte reading;
-
-  while (1) {
-    reading = Serial.read();
-    switch(reading) {
-      case CODEEND:
-        EndSession(0);
-      case STARTCODE:
-        return;   // Start session
-    }
+  if (session_type == 0) {
+    trial_num = cs0_num + cs1_num + cs2_num;
+  } else if (session_type == 1) {
+    trial_num = cs0_num + cs1_num;
   }
   trial_dur = pre_stim + post_stim;
 }
@@ -341,14 +337,11 @@ void setup() {
   // Set pins
   pinMode(pin_track_a, INPUT);
   pinMode(pin_track_b, INPUT);
-
-  // pinMode(pin_lick, INPUT);
+  pinMode(pin_vac, OUTPUT);
   pinMode(pin_sol_0, OUTPUT);
   pinMode(pin_sol_1, OUTPUT);
-  pinMode(pin_vac, OUTPUT);
-
+  pinMode(pin_sol_2, OUTPUT);
   pinMode(pin_signal, OUTPUT);
-
   pinMode(pin_img_start, OUTPUT);
   pinMode(pin_img_stop, OUTPUT);
 
@@ -362,19 +355,19 @@ void setup() {
   GetParams();
   Serial.println("Parameters processed");
 
-  // First trial
-  switch (iti_distro) {
-    case 0:
-      next_trial_ts = pre_session + mean_iti;
-      break;
-    case 1:
-      next_trial_ts = pre_session + behav.UniDistro(min_iti, max_iti);
-      break;
-    case 2:
-      next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
-      break;
-    break;
-  }
+  if (session_type == code_classical_conditioning || session_type == code_go_nogo) {
+    // First trial
+    switch (iti_distro) {
+      case 0:
+        next_trial_ts = pre_session + mean_iti;
+        break;
+      case 1:
+        next_trial_ts = pre_session + behav.UniDistro(min_iti, max_iti);
+        break;
+      case 2:
+        next_trial_ts = pre_session + behav.ExpDistro(mean_iti, min_iti, max_iti);
+        break;
+    }
 
     // Shuffle trials
     cs_trial_types = new () int[trial_num];
@@ -413,26 +406,19 @@ void loop() {
 
   // -- 0. SERIAL SCAN -- //
   // Read from computer
-  if (Serial.available() > 0) {
-    // Watch for information from computer.
-    byte reading = Serial.read();
-    switch(reading) {
-      case CODEEND:
-        EndSession(ts);
-        break;
-      break;
-    }
-  }
+  LookForSignal(0, ts);
 
   // -- 1. TRIAL CONTROL -- //
   switch (session_type) {
-    case 0:
+    case code_classical_conditioning:
       ClassicalConditioning(ts, lick_count);
       break;
-    case 1:
+    case code_go_nogo:
       GoNogo(ts, lick_count);
       break;
-    break;
+    case code_free_licking:
+      FreeLicking(ts, lick_count);
+      break;
   }
 
   // -- 2. TRACK MOVEMENT -- //
@@ -452,7 +438,7 @@ void loop() {
   boolean lick_state_now;
   // lick_state_now = digitalRead(pin_lick);
   int lick_reading = analogRead(pin_lick);
-
+  if (lick_reading < LICK_REC_THRESHOLD) behav.SendData(stream, code_lick_form, ts, lick_reading);
   if (lick_reading < LICK_THRESHOLD) lick_state_now = true;
   else lick_state_now = false;
 
