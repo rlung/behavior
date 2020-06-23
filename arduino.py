@@ -38,6 +38,7 @@ class Arduino(tk.Frame):
         except AttributeError: self.print_arduino = '  [a]: '
         self.verbose = verbose
         self.parameters = params
+        self.var_uploaded = tk.BooleanVar(name='uploaded')
 
         self.ser = serial.Serial(timeout=1, write_timeout=3, baudrate=9600)
 
@@ -98,12 +99,14 @@ class Arduino(tk.Frame):
             self.button_open_port['state'] = 'disabled'
             self.button_close_port['state'] = 'normal'
             relabel(self.entry_serial_status, 'Uploaded')
+            self.var_uploaded.set(True)
         elif opt == 'resetting':
             self.button_close_port['state'] = 'disabled'
             relabel(self.entry_serial_status, 'Resetting connection...')
         elif opt == 'reset':
             relabel(self.entry_serial_status, 'Waiting for parameters')
             self.update_ports()
+            self.var_uploaded.set(False)
         else:
             print('Unknown utility option')
         self.parent.update_idletasks()
@@ -219,8 +222,8 @@ class Sample(ttk.Frame):
     def __init__(self, parent, verbose=False):
         self.parent = parent
 
-        self.var_param1 = tk.IntVar()
-        self.var_param2 = tk.IntVar()
+        self.var_param1 = tk.IntVar(name='param1')
+        self.var_param2 = tk.IntVar(name='param2')
         self.params = {'a': self.var_param1, 'b': self.var_param2}
 
         self.var_param1.set(10000)
@@ -236,7 +239,15 @@ class Sample(ttk.Frame):
         entry_param1.grid(row=0, column=0)
         entry_param2.grid(row=1, column=0)
 
-        Arduino(frame_arduino, verbose=verbose, params=self.params)
+        self.Arduino = Arduino(frame_arduino, verbose=verbose, params=self.params)
+
+        self.obj_to_disable_on_upload = [child for child in frame_params.winfo_children()]
+        self.Arduino.var_uploaded.trace_add('write', self.toggle_gui)
+
+    def toggle_gui(self, var, indx, mode):
+        new_state = 'disable' if self.parent.getvar(var) else 'normal'
+        for obj in self.obj_to_disable_on_upload:
+            obj['state'] = new_state
 
 
 def main():
