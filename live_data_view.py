@@ -14,9 +14,11 @@ import numpy as np
 
 
 class LiveDataView(ttk.Frame):
-    def __init__(self, parent, x_history=30, data_types={'default': 'line'}, **ax_kwargs):
+    def __init__(self, parent, x_history=30, scale_x=1, scale_y = 1, data_types={'default': 'line'}, **ax_kwargs):
         self.parent = parent
-        self.x_history = x_history
+        self.x_history = x_history * scale_x
+        self.scale_x = scale_x
+        self.scale_y = scale_y
 
         # Create matplotlib figure
         self.fig_preview = Figure()
@@ -39,20 +41,21 @@ class LiveDataView(ttk.Frame):
     def update_view(self, xy, name='default'):
         # Update data
         # Need to determine the type of plot it is.
+        new_xy = xy * np.array([self.scale_x, self.scale_y])
         data_type = type(self.data[name])
         if data_type == matplotlib.lines.Line2D:
             # Line plot
             current = self.data[name].get_xydata()
-            updated = self.update_data(current, xy)
+            updated = self.update_data(current, new_xy)
             self.data[name].set_data(updated.T)
         elif data_type == matplotlib.collections.PathCollection:
             # Scatter plot
             current = self.data[name].get_offsets()
-            updated = self.update_data(current, xy)
+            updated = self.update_data(current, new_xy)
             self.data[name].set_offsets(updated)
 
         # Update view
-        new_xlim = xy[0] + np.array([-self.x_history, 0])
+        new_xlim = new_xy[0] + np.array([-self.x_history, 0])
         self.ax_preview.set_xlim(new_xlim)
         self.canvas_preview.draw_idle()
 
