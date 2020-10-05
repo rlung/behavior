@@ -24,18 +24,16 @@ from PIL import ImageTk
 import serial
 import serial.tools.list_ports
 
-import pdb
 
 code_last_param = 271828
 
 class Arduino(tk.Frame):
-    def __init__(self, parent, main_window=None, verbose=False, params={'a': 1, 'b': 2}):
+    def __init__(self, parent, main_window=None, verbose=False, print_arduino=False, params={'a': 1, 'b': 2}):
         super().__init__()   # https://stackoverflow.com/questions/576169/understanding-python-super-with-init-methods
         self.parent = parent
         self.main_window = main_window if main_window else self.parent
 
-        try: self.print_arduino = self.var_print_arduino.get()
-        except AttributeError: self.print_arduino = '  [a]: '
+        self.print_arduino = '  [a]: ' if print_arduino else False
         self.verbose = verbose
         self.parameters = params
         self.var_uploaded = tk.BooleanVar(name='uploaded')
